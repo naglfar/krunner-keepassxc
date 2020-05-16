@@ -3,11 +3,13 @@ from gi.repository import GLib
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 
+import subprocess
 from Clipboard import Clipboard
 from KeepassPasswords import KeepassPasswords
 
-objpath="/krunner"
-iface="org.kde.krunner1"
+BUS_NAME = "de.naglfar.krunner-keepassxc"
+OBJ_PATH="/krunner"
+IFACE="org.kde.krunner1"
 
 
 class Runner(dbus.service.Object):
@@ -16,16 +18,21 @@ class Runner(dbus.service.Object):
 	cp = None
 	
 	def __init__(self):
-		dbus.service.Object.__init__(self, dbus.service.BusName("de.naglfar.krunner-keepassxc", dbus.SessionBus()), objpath)
+		
+		sessionbus = dbus.SessionBus()
+		sessionbus.request_name(BUS_NAME, dbus.bus.NAME_FLAG_REPLACE_EXISTING)
+		bus_name = dbus.service.BusName(BUS_NAME, bus=sessionbus)
+		dbus.service.Object.__init__(self, bus_name, OBJ_PATH)
+		
 		self.kp = KeepassPasswords()
 		self.cp = Clipboard()
 
-	@dbus.service.method(iface, out_signature='a(sss)')
+	@dbus.service.method(IFACE, out_signature='a(sss)')
 	def Actions(self, msg):
 		# FIXME: does not seem to get called at all
 		return ['','','']
 
-	@dbus.service.method(iface, in_signature='s', out_signature='a(sssida{sv})')
+	@dbus.service.method(IFACE, in_signature='s', out_signature='a(sssida{sv})')
 	def Match(self, query):
 		
 		if len(query) > 2:
@@ -41,15 +48,19 @@ class Runner(dbus.service.Object):
 		return []
 		
 
-	@dbus.service.method(iface, in_signature='ss',)
+	@dbus.service.method(IFACE, in_signature='ss',)
 	def Run(self, matchId, actionId):
 		# matchId is data from Match
 		if len(matchId) > 0:
 			secret = self.kp.getSecret(matchId)
 			if secret:
-				secret = secret.replace('"','\\"')
-				secret = secret.replace("'","\\'")
-				self.cp.copy(secret)
+				try:
+					self.cp.copy(secret)
+				except NotImplementedError as e:
+					print('neither xsel nor xclip seem to be installed')
+				except Exception as e:
+					print(str(e))
+				
 				
 		return
 

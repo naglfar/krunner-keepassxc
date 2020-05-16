@@ -85,17 +85,14 @@ class KeepassPasswords:
 			iface = dbus.Interface(password, 'org.freedesktop.Secret.Item')
 			
 			result = iface.GetSecret(str(s))
-
-			secret = ""
-			for byteValue in result[2]:
-				secret += chr(byteValue)
-		except:
-			pass
+			
+			#result[2] is a list of bytes			
+			secret = bytes(result[2]).decode('utf-8')
+			
+		except Exception as e:
+			print(e)
 		
 		return secret
-		
-		
-			
 
 
 if __name__ == '__main__':

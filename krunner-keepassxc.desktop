@@ -1,0 +1,19 @@
+#~/.local/share/kservices5/
+# seems to require restart before krunner send actual dbus calls,
+# even if the plugin already shows up in krunner settings
+
+[Desktop Entry]
+Name=KeepassXC to Clipboard
+Comment=Find and copy secrets to clippboard
+X-KDE-ServiceTypes=Plasma/Runner
+Type=Service
+Icon=object-unlocked
+X-KDE-PluginInfo-Author=naglfar
+X-KDE-PluginInfo-Email=
+X-KDE-PluginInfo-Name=krunner-keepassxc
+X-KDE-PluginInfo-Version=1.0
+X-KDE-PluginInfo-License=LGPL
+X-KDE-PluginInfo-EnabledByDefault=true
+X-Plasma-API=DBus
+X-Plasma-DBusRunner-Service=de.naglfar.krunner-keepassxc
+X-Plasma-DBusRunner-Path=/krunner

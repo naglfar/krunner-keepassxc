@@ -1,9 +1,9 @@
 #!/bin/env python3
-import subprocess
 from gi.repository import GLib
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 
+from Clipboard import Clipboard
 from KeepassPasswords import KeepassPasswords
 
 objpath="/krunner"
@@ -13,10 +13,12 @@ iface="org.kde.krunner1"
 class Runner(dbus.service.Object):
 	
 	kp = None
+	cp = None
 	
 	def __init__(self):
 		dbus.service.Object.__init__(self, dbus.service.BusName("de.naglfar.krunner-keepassxc", dbus.SessionBus()), objpath)
 		self.kp = KeepassPasswords()
+		self.cp = Clipboard()
 
 	@dbus.service.method(iface, out_signature='a(sss)')
 	def Actions(self, msg):
@@ -28,17 +30,8 @@ class Runner(dbus.service.Object):
 		
 		if len(query) > 2:
 			items = [i for i in self.kp.labels if query.lower() in i.lower()]
-			if len(items) > 0:
-				# if multiple items found, see if we can get a direct hit, else return the first one
-				if len(items) > 1:
-					directHit = [i for i in items if query.lower() == i.lower()]
-					if len(directHit) > 0:
-						items = directHit
-
-				item = items[0]
-					
-				#		data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
-				return [(item,"Copy to clipboard: " + item,"object-unlocked",100,1,{})]
+			items.sort(key=lambda item: (not item.startswith(query), item))
+			return [(item,"Copy to clipboard: " + item,"object-unlocked",100,(1 - (i * 0.01)),{}) for i,item in enumerate(items)]
 		
 		return []
 		
@@ -51,7 +44,7 @@ class Runner(dbus.service.Object):
 			if secret:
 				secret = secret.replace('"','\\"')
 				secret = secret.replace("'","\\'")
-				subprocess.run('printf "'+secret+'" | xsel -b', shell=True, stdout=subprocess.PIPE)
+				self.cp.copy(secret)
 				
 		return
 

@@ -29,16 +29,21 @@ class Runner(dbus.service.Object):
 	def Match(self, query):
 		
 		if len(query) > 2:
+			# find entries that contain the query
 			items = [i for i in self.kp.labels if query.lower() in i.lower()]
+			# sort entries starting with the query on top
 			items.sort(key=lambda item: (not item.startswith(query), item))
-			return [(item,"Copy to clipboard: " + item,"object-unlocked",100,(1 - (i * 0.01)),{}) for i,item in enumerate(items)]
+			# max 5 entries
+			items = items[:5]
+			#		data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
+			return [(item,"Copy to clipboard: " + item,"object-unlocked",100,(1 - (i * 0.1)),{}) for i,item in enumerate(items)]
 		
 		return []
 		
 
 	@dbus.service.method(iface, in_signature='ss',)
 	def Run(self, matchId, actionId):
-
+		# matchId is data from Match
 		if len(matchId) > 0:
 			secret = self.kp.getSecret(matchId)
 			if secret:

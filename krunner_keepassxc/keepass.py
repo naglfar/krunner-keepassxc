@@ -2,50 +2,56 @@
 
 import argparse
 import dbus
+import os
 import time
+from .dhcrypto import dhcrypto
 
 class KeepassPasswords:
-	
+
 	bus = None
 	_session = None
 	lastCheck = None
 	_labels = []
 	_passwords = {}
 	
+	crypto = None
+	
 	def __init__(self):
 		self.bus = dbus.SessionBus()
-
+		
+		self.crypto = dhcrypto()
 			
 	@property
 	def session(self):
 		if not self._session:
 			secrets = self.bus.get_object('org.keepassxc.KeePassXC.MainWindow', '/org/freedesktop/secrets')
 			iface = dbus.Interface(secrets, 'org.freedesktop.Secret.Service')
-			session = iface.OpenSession('plain', '')
+
+			if not self.crypto.active:
+				output, sessionPath = iface.OpenSession('plain', '')
+			else:
+				output, sessionPath = iface.OpenSession('dh-ietf1024-sha256-aes128-cbc-pkcs7', self.crypto.pubkey_as_list())
+				self.crypto.set_server_public_key(output)
 			
-			self._session = session[1]
+			self._session = sessionPath
 		
 		return self._session
 			
-			
-	@property
-	def labels(self):
-		
+	
+	def updateProperties(self):
 		now = time.time()
 		if not self.lastCheck or (now - 60 * 5 ) > self.lastCheck:
 			self.lastCheck = now
 			self.fetchData()
-		
+	
+	@property
+	def labels(self):
+		self.updateProperties()
 		return self._labels
 		
 	@property
 	def passwords(self):
-		
-		now = time.time()
-		if not self.lastCheck or (now - 60 * 5 ) > self.lastCheck:
-			self.lastCheck = now
-			self.fetchData()
-		
+		self.updateProperties()		
 		return self._passwords
 		
 
@@ -70,44 +76,24 @@ class KeepassPasswords:
 			labels.append(str(label))
 			passwords[label] = item
 			
-			
 		self._labels = labels
 		self._passwords = passwords
 
 	def getSecret(self, label):
 		s = self.session
 
-		secret = ""
-		try:
-			path = self.passwords[label]
-			password = self.bus.get_object('org.keepassxc.KeePassXC.MainWindow', path)
-			#print(password.Introspect())
-			iface = dbus.Interface(password, 'org.freedesktop.Secret.Item')
-			
-			result = iface.GetSecret(str(s))
-			
-			#result[2] is a list of bytes			
+		path = self.passwords[label]
+		password = self.bus.get_object('org.keepassxc.KeePassXC.MainWindow', path)
+		#print(password.Introspect())
+		iface = dbus.Interface(password, 'org.freedesktop.Secret.Item')
+		
+		result = iface.GetSecret(str(s))
+		secret = ""		
+
+		#result[2] is a list of bytes		
+		if not self.crypto.active:
 			secret = bytes(result[2]).decode('utf-8')
-			
-		except Exception as e:
-			print(e)
+		else:
+			secret = self.crypto.decryptMessage(result)
 		
 		return secret
-
-
-if __name__ == '__main__':
-	
-	parser = argparse.ArgumentParser()
-	parser.add_argument("-l", "--labels", help="list the entries in your opened database", action="store_true", dest="list")
-	parser.add_argument("-p", "--password", help="get the password for one of your entries", dest="password")
-	args = parser.parse_args()
-	
-	kp = KeepassPasswords()
-	if args.list:
-		labels = kp.labels
-		print(labels)
-	elif args.password:
-		secret = kp.getSecret(args.password)
-		print(secret or 'Nothing found')
-	else:
-		parser.print_help()

@@ -4,3 +4,5 @@ A small krunner plugin to copy keepassxc entries to clipboard using its Freedesk
 Includes a .desktop file for installing the plugin in krunner aswell as a systemd .service template so the plugin can run in background.
 
 Requires xclip or xsel to be installed for copying to clipboard, keepass has to be configured for secret service access (in both general and database settings).
+
+Transferring passwords through an encrypted session will require cryptography to be installed, falls back on plaintext transmission.

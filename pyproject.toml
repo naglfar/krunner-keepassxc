@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "krunner-keepassxc"
+version = "0.1.0"
+description = ""
+authors = ["naglfar <stefan@mtztech.info>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+vext = "^0.7.3"
+"vext.gi" = "^0.7.0"
+dbus-python = "^1.2.16"
+cryptography = "^2.9.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry.scripts]
+runner = "krunner:run"
+cli = "keepass_cli:cli"

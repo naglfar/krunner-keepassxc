@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Runner
+Comment=Autostart entry krunner-keepassxc
+Keywords=Runner;Krunner
+Categories=Utilities
+Exec=python3 "%{Folder_LOCATION}/krunner.py"
+Icon=python
+StartupNotify=true

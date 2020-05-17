@@ -3,9 +3,8 @@ from gi.repository import GLib
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 
-import subprocess
-from Clipboard import Clipboard
-from KeepassPasswords import KeepassPasswords
+from .clipboard import Clipboard
+from .keepass import KeepassPasswords
 
 BUS_NAME = "de.naglfar.krunner-keepassxc"
 OBJ_PATH="/krunner"
@@ -19,6 +18,8 @@ class Runner(dbus.service.Object):
 	
 	def __init__(self):
 		
+		DBusGMainLoop(set_as_default=True)
+		
 		sessionbus = dbus.SessionBus()
 		sessionbus.request_name(BUS_NAME, dbus.bus.NAME_FLAG_REPLACE_EXISTING)
 		bus_name = dbus.service.BusName(BUS_NAME, bus=sessionbus)
@@ -26,6 +27,9 @@ class Runner(dbus.service.Object):
 		
 		self.kp = KeepassPasswords()
 		self.cp = Clipboard()
+		
+		loop = GLib.MainLoop()
+		loop.run()
 
 	@dbus.service.method(IFACE, out_signature='a(sss)')
 	def Actions(self, msg):
@@ -61,15 +65,4 @@ class Runner(dbus.service.Object):
 				except Exception as e:
 					print(str(e))
 				
-				
 		return
-
-
-if __name__ == '__main__':
-	
-	DBusGMainLoop(set_as_default=True)
-	    
-	runner = Runner()
-	loop = GLib.MainLoop()
-
-	loop.run()

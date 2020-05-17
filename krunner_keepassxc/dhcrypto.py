@@ -2,13 +2,12 @@ import hmac
 import math
 import os
 
-from hashlib import sha256
-#from .aes import AES, encrypt, decrypt
-
 CRYPTOGRAPHY_MISSING = False
 try:
-	from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 	from cryptography.hazmat.backends import default_backend
+	from cryptography.hazmat.primitives import hashes, padding
+	from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+	from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 	from cryptography.utils import int_from_bytes
 except:
 	CRYPTOGRAPHY_MISSING = True
@@ -53,19 +52,39 @@ class dhcrypto:
 	def set_server_public_key(self, server_public_key):
 		common_secret = pow(int_from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
 		common_secret = self.int_to_bytes(common_secret)
-		# Prepend NULL bytes if needed
-		common_secret = b'\x00' * (0x80 - len(common_secret)) + common_secret
-		# HKDF with null salt, empty info and SHA-256 hash
-		salt = b'\x00' * 0x20
-		pseudo_random_key = hmac.new(salt, common_secret, sha256).digest()
-		output_block = hmac.new(pseudo_random_key, b'\x01', sha256).digest()
-		# Resulting AES key should be 128-bit
-		self.aes_key = output_block[:0x10]
+
+		hkdf = HKDF(
+			algorithm=hashes.SHA256(),
+			length=16,
+			salt=None,
+			info=None,
+			backend=default_backend()
+		)
+		self.aes_key = hkdf.derive(common_secret)
+
 		
-	def decryptMessage(self, result):		
-		aes = algorithms.AES(self.aes_key)
+	def decryptMessage(self, result):
 		aes_iv = bytes(result[1])
-		decryptor = Cipher(aes, modes.CBC(aes_iv), default_backend()).decryptor()
-		encrypted_secret = result[2]
-		padded_secret = decryptor.update(bytes(encrypted_secret)) + decryptor.finalize()
-		return padded_secret[:-padded_secret[-1]]
+
+		encrypted_secret = bytes(result[2])
+
+		cipher = Cipher(algorithms.AES(self.aes_key), modes.CBC(aes_iv), backend=default_backend())
+		decryptor = cipher.decryptor()
+		ct = decryptor.update(encrypted_secret) + decryptor.finalize()
+
+		unpadder = padding.PKCS7(128).unpadder()
+		unpadded_data = unpadder.update(ct)
+		return unpadded_data.decode('utf-8')
+
+	def encryptMessage(self, message):
+		aes_iv = bytes(os.urandom(16))
+		
+		padder = padding.PKCS7(128).padder()
+		message = message.encode('utf-8')
+		padded_data = padder.update(message) + padder.finalize()
+
+		cipher = Cipher(algorithms.AES(self.aes_key), modes.CBC(aes_iv), backend=default_backend())
+		encryptor = cipher.encryptor()
+		
+		ct = encryptor.update(padded_data) + encryptor.finalize()
+		return "", aes_iv, ct

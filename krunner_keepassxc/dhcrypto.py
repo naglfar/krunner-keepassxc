@@ -8,14 +8,15 @@ try:
 	from cryptography.hazmat.primitives import hashes, padding
 	from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 	from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-	from cryptography.utils import int_from_bytes
+	from cryptography.utils import int_from_bytes, int_to_bytes
 except:
 	CRYPTOGRAPHY_MISSING = True
 
 
 class dhcrypto:
 	
-	# A standard 1024 bits (128 bytes) prime number for use in Diffie-Hellman exchange
+	# Second Oakley Group prime number for use in Diffie-Hellman exchange
+	# https://tools.ietf.org/html/rfc2409#section-6.2
 	DH_PRIME_1024_BYTES = (
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2, 0x21, 0x68, 0xC2, 0x34,
 		0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1, 0x29, 0x02, 0x4E, 0x08, 0x8A, 0x67, 0xCC, 0x74,
@@ -42,16 +43,13 @@ class dhcrypto:
 
 			self.pkey = int_from_bytes(os.urandom(0x80), 'big')
 			self.pubkey = pow(2, self.pkey, self.DH_PRIME_1024)
-	
-	def int_to_bytes(self, number):
-		return number.to_bytes(math.ceil(number.bit_length() / 8), 'big')
 		
 	def pubkey_as_list(self):
-		return list(self.int_to_bytes(self.pubkey))
+		return list(int_to_bytes(self.pubkey))
 
 	def set_server_public_key(self, server_public_key):
 		common_secret = pow(int_from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
-		common_secret = self.int_to_bytes(common_secret)
+		common_secret = int_to_bytes(common_secret)
 
 		hkdf = HKDF(
 			algorithm=hashes.SHA256(),

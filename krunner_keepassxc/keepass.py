@@ -8,6 +8,9 @@ from .dhcrypto import dhcrypto
 
 class KeepassPasswords:
 
+	#BUS_NAME = 'org.keepassxc.KeePassXC.MainWindow'
+	BUS_NAME = 'org.freedesktop.secrets'
+
 	bus = None
 	_session = None
 	lastCheck = None
@@ -24,14 +27,14 @@ class KeepassPasswords:
 	@property
 	def session(self):
 		if not self._session:
-			secrets = self.bus.get_object('org.keepassxc.KeePassXC.MainWindow', '/org/freedesktop/secrets')
+			secrets = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets')
 			iface = dbus.Interface(secrets, 'org.freedesktop.Secret.Service')
 
 			if not self.crypto.active:
 				output, sessionPath = iface.OpenSession('plain', '')
 			else:
-				output, sessionPath = iface.OpenSession('dh-ietf1024-sha256-aes128-cbc-pkcs7', self.crypto.pubkey_as_list())
-				self.crypto.set_server_public_key(output)
+				server_pubkey, sessionPath = iface.OpenSession('dh-ietf1024-sha256-aes128-cbc-pkcs7', dbus.ByteArray(self.crypto.pubkey_as_bytes()))
+				self.crypto.set_server_public_key(server_pubkey)
 			
 			self._session = sessionPath
 		
@@ -57,7 +60,7 @@ class KeepassPasswords:
 
 	def fetchData(self):
 
-		passwords = self.bus.get_object('org.keepassxc.KeePassXC.MainWindow', '/org/freedesktop/secrets/collection/passwords')
+		passwords = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets/collection/passwords')
 
 		#print(passwords.Introspect())
 
@@ -68,7 +71,7 @@ class KeepassPasswords:
 		labels = []
 		passwords = {}
 		for item in items.get('Items'):
-			password = self.bus.get_object('org.keepassxc.KeePassXC.MainWindow', item)
+			password = self.bus.get_object(self.BUS_NAME, item)
 			#print(password.Introspect())
 			iface2 = dbus.Interface(password, 'org.freedesktop.DBus.Properties')
 			items = iface2.GetAll('org.freedesktop.Secret.Item')
@@ -83,7 +86,7 @@ class KeepassPasswords:
 		s = self.session
 
 		path = self.passwords[label]
-		password = self.bus.get_object('org.keepassxc.KeePassXC.MainWindow', path)
+		password = self.bus.get_object(self.BUS_NAME, path)
 		#print(password.Introspect())
 		iface = dbus.Interface(password, 'org.freedesktop.Secret.Item')
 		

@@ -18,8 +18,7 @@ def cli():
 		secret = kp.getSecret(args.password)
 		print(secret or 'Nothing found')
 	else:
-		#parser.print_help()
-		print(kp.getSecret('test'))
+		parser.print_help()
 
 
 if __name__ == '__main__':	

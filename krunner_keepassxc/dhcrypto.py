@@ -41,13 +41,19 @@ class dhcrypto:
 
 			self.DH_PRIME_1024 = int_from_bytes(self.DH_PRIME_1024_BYTES, 'big')
 
-			self.pkey = int_from_bytes(os.urandom(0x80), 'big')
+			self.pkey = int_from_bytes(os.urandom(128), 'big')
 			self.pubkey = pow(2, self.pkey, self.DH_PRIME_1024)
+
+			#print("keys")
+			#print (self.pkey)
+			#print (self.pubkey)
 		
 	def pubkey_as_list(self):
 		return list(int_to_bytes(self.pubkey))
 
 	def set_server_public_key(self, server_public_key):
+		#print("public_key")
+		#print(bytes(server_public_key))
 		common_secret = pow(int_from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
 		common_secret = int_to_bytes(common_secret)
 
@@ -63,12 +69,16 @@ class dhcrypto:
 		
 	def decryptMessage(self, result):
 		aes_iv = bytes(result[1])
-
 		encrypted_secret = bytes(result[2])
+		#print("decrypt")
+		#print(aes_iv)
+		#print(encrypted_secret)
 
 		cipher = Cipher(algorithms.AES(self.aes_key), modes.CBC(aes_iv), backend=default_backend())
 		decryptor = cipher.decryptor()
 		ct = decryptor.update(encrypted_secret) + decryptor.finalize()
+
+		#print(ct)
 
 		unpadder = padding.PKCS7(128).unpadder()
 		unpadded_data = unpadder.update(ct)
@@ -83,6 +93,6 @@ class dhcrypto:
 
 		cipher = Cipher(algorithms.AES(self.aes_key), modes.CBC(aes_iv), backend=default_backend())
 		encryptor = cipher.encryptor()
-		
+
 		ct = encryptor.update(padded_data) + encryptor.finalize()
 		return "", aes_iv, ct

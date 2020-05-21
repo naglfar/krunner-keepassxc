@@ -1,7 +1,8 @@
 import unittest
 
 from krunner_keepassxc import __version__
-from krunner_keepassxc.dhcrypto import dhcrypto, dhcryptoss
+from krunner_keepassxc.dhcrypto import dhcrypto
+from .dhcrypto_reference import dhcryptoss
 
 class Tests(unittest.TestCase):
 

@@ -5,7 +5,7 @@ Description=krunner-keepassxc python service
 
 [Service]
 Environment="DISPLAY=:0"
-ExecStart=%h/coding/krunner-keepassxc/krunner.py
+ExecStart=%h/path/krunner-keepassxc/krunner_keepassxc_krunner.py # or python3 -m krunner_keepassxc_krunner.py
 
 [Install]
 WantedBy=default.target

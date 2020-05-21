@@ -5,6 +5,6 @@ Name=Runner
 Comment=Autostart entry krunner-keepassxc
 Keywords=Runner;Krunner
 Categories=Utilities
-Exec=python3 "%{Folder_LOCATION}/krunner.py"
+Exec=python3 "/path/to/krunner_keepassxc_krunner.py" # or python3 -m krunner_keepassxc_krunner.py
 Icon=python
 StartupNotify=true

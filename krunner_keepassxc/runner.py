@@ -61,8 +61,8 @@ class Runner(dbus.service.Object):
 				try:
 					self.cp.copy(secret)
 				except NotImplementedError as e:
-					print('neither xsel nor xclip seem to be installed')
+					print('neither xsel nor xclip seem to be installed', flush=True)
 				except Exception as e:
-					print(str(e))
+					print(str(e), flush=True)
 				
 		return

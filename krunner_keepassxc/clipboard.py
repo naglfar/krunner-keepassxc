@@ -1,3 +1,4 @@
+import sys
 import subprocess
 
 class Clipboard:
@@ -26,7 +27,8 @@ class Clipboard:
 			if primary:
 				selection=PRIMARY_SELECTION
 			p = subprocess.Popen(['xclip', '-selection', selection], stdin=subprocess.PIPE, close_fds=True)
-			p.communicate(input=text.encode('utf-8'))
+			stdout, stderr = p.communicate(input=text.encode('utf-8'))
+			if stderr: print(stderr, file=sys.stderr)
 		
 		def paste_xclip(primary=False):
 			selection=DEFAULT_SELECTION
@@ -51,7 +53,8 @@ class Clipboard:
 			if primary:
 				selection_flag = PRIMARY_SELECTION
 			p = subprocess.Popen(['xsel', selection_flag, '-i'], stdin=subprocess.PIPE, close_fds=True)
-			p.communicate(input=text.encode('utf-8'))
+			stdout, stderr = p.communicate(input=text.encode('utf-8'))
+			if stderr: print(stderr, file=sys.stderr)
 
 		def paste_xsel(primary=False):
 			selection_flag = DEFAULT_SELECTION

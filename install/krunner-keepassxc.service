@@ -4,6 +4,7 @@
 Description=krunner-keepassxc python service
 
 [Service]
+Environment="DISPLAY=:0"
 ExecStart=%h/coding/krunner-keepassxc/krunner.py
 
 [Install]

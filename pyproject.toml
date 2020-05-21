@@ -3,7 +3,6 @@ name = "krunner-keepassxc"
 version = "1.0.0"
 description = ""
 authors = ["naglfar <stefan@mtztech.info>"]
-include = ["krunner_keepassxc_cli.py", "krunner_keepassxc_krunner.py"]
 
 [tool.poetry.dependencies]
 python = "^3.5"
@@ -20,5 +19,5 @@ requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry.scripts]
-runner = "krunner_keepassxc_krunner:krunner"
-cli = "krunner_keepassxc_cli:cli"
+runner = "krunner_keepassxc.__main__:main"
+cli = "krunner_keepassxc.__main__:cli"

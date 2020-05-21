@@ -27,7 +27,8 @@ class Runner(dbus.service.Object):
 		
 		self.kp = KeepassPasswords()
 		self.cp = Clipboard()
-		
+
+	def run(self):	
 		loop = GLib.MainLoop()
 		loop.run()
 

@@ -9,8 +9,8 @@ this will pull the files and dependencies (dbus-python, cryptography) into your 
 ```
 $ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/1.0.0/krunner_keepassxc-1.0.0-py3-none-any.whl
 see if it works:
-$ python3 -m krunner_keepassxc_cli -l  # should list all the password labels in your database
-$ python3 -m krunner_keepassxc_krunner  # will start the dbus service for communicating with krunner
+$ python3 -m krunner_keepassxc cli -l  # should list all the password labels in your database
+$ python3 -m krunner_keepassxc  # will start the dbus service for communicating with krunner
 ```
 
 ## quick start using poetry ## 
@@ -27,14 +27,11 @@ after this krunner-keepassxc should already show up in krunner plugins but might
 
 ## running the service in background / on startup ##
 # via autostart
-edit [install/krunner-keepassxc_autostart.desktop](install/krunner-keepassxc_autostart.desktop) to fit your scenario  
-and copy to ~/.config/autostart
+edit [install/krunner-keepassxc_autostart.desktop](install/krunner-keepassxc_autostart.desktop) to include virtual env if needed
+and copy to ~/.config/autostart/
 # via systemd
-edit path or use python -m in [install/krunner-keepassxc_novenv.service](install/krunner-keepassxc_novenv.service)  
-and copy to ~/.config/systemd/user/krunner-keepassxc.service
-# via systemd as venv (poetry installation)
-edit path in [install/krunner-keepassxc_venv.service](install/krunner-keepassxc_venv.service)  
-and copy to ~/.config/systemd/user/krunner-keepassxc.service
+edit [install/krunner-keepassxc.service](install/krunner-keepassxc_novenv.service) to include virtual env if needed
+and copy to ~/.config/systemd/user/
 ```
 $ systemctl --user enable krunner-keepassxc && systemctl --user start krunner-keepassxc
 ```

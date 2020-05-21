@@ -22,16 +22,19 @@ $ poetry run cli -l # should list all the password labels in your database
 ```
 
 ## installing the krunner plugin  ##
-copy [install/krunner-keepassxc.desktop](install/krunner-keepassxc.desktop) to ~/.local/share/kservices5/
+copy [install/krunner-keepassxc.desktop](install/krunner-keepassxc.desktop) to ~/.local/share/kservices5/  
 after this krunner-keepassxc should already show up in krunner plugins but might require a reboot to actually work
 
 ## running the service in background / on startup ##
 # via autostart
-edit [install/krunner-keepassxc_autostart.desktop](install/krunner-keepassxc_autostart.desktop) to fit your scenario and copy to ~/.config/autostart
+edit [install/krunner-keepassxc_autostart.desktop](install/krunner-keepassxc_autostart.desktop) to fit your scenario  
+and copy to ~/.config/autostart
 # via systemd
-edit path or use python -m in (install/krunner-keepassxc_novenv.service)[install/krunner-keepassxc_novenv.service] and copy to ~/.config/systemd/user/krunner-keepassxc.service
+edit path or use python -m in (install/krunner-keepassxc_novenv.service)[install/krunner-keepassxc_novenv.service]  
+and copy to ~/.config/systemd/user/krunner-keepassxc.service
 # via systemd as venv (poetry installation)
-edit path in (install/krunner-keepassxc_venv.service)[install/krunner-keepassxc_venv.service] and copy to ~/.config/systemd/user/krunner-keepassxc.service
+edit path in (install/krunner-keepassxc_venv.service)[install/krunner-keepassxc_venv.service]  
+and copy to ~/.config/systemd/user/krunner-keepassxc.service
 ```
 $ systemctl --user enable krunner-keepassxc && systemctl --user start krunner-keepassxc
 ```

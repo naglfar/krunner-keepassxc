@@ -20,7 +20,7 @@ class dhcryptoss:
 		0xEE, 0x38, 0x6B, 0xFB, 0x5A, 0x89, 0x9F, 0xA5, 0xAE, 0x9F, 0x24, 0x11, 0x7C, 0x4B, 0x1F, 0xE6,
 		0x49, 0x28, 0x66, 0x51, 0xEC, 0xE6, 0x53, 0x81, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 	)
-	
+
 	DH_PRIME_1024 = int_from_bytes(DH_PRIME_1024_BYTES, 'big')
 
 	active = True
@@ -35,7 +35,7 @@ class dhcryptoss:
 
 	def int_to_bytes(self, number):
 		return number.to_bytes(math.ceil(number.bit_length() / 8), 'big')
-		
+
 	def pubkey_as_list(self):
 		return list(int_to_bytes(self.pubkey))
 
@@ -51,7 +51,7 @@ class dhcryptoss:
 		output_block = hmac.new(pseudo_random_key, b'\x01', sha256).digest()
 		# Resulting AES key should be 128-bit
 		self.aes_key = output_block[:0x10]
-		
+
 	def decryptMessage(self, secret):
 		aes = algorithms.AES(self.aes_key)
 		aes_iv = bytes(secret[1])
@@ -75,4 +75,4 @@ class dhcryptoss:
 		encryptor = Cipher(aes, modes.CBC(aes_iv), default_backend()).encryptor()
 		encrypted_secret = encryptor.update(secret) + encryptor.finalize()
 		return "", aes_iv, encrypted_secret
-	
+

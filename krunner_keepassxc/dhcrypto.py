@@ -16,7 +16,7 @@ except:
 # https://specifications.freedesktop.org/secret-service/latest/ch07s03.html
 
 class dhcrypto:
-	
+
 	# Second Oakley Group prime number for use in Diffie-Hellman exchange
 	# https://tools.ietf.org/html/rfc2409#section-6.2
 	DH_PRIME_1024_BYTES = (
@@ -29,13 +29,13 @@ class dhcrypto:
 		0xEE, 0x38, 0x6B, 0xFB, 0x5A, 0x89, 0x9F, 0xA5, 0xAE, 0x9F, 0x24, 0x11, 0x7C, 0x4B, 0x1F, 0xE6,
 		0x49, 0x28, 0x66, 0x51, 0xEC, 0xE6, 0x53, 0x81, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 	)
-	
+
 	active = True
 
 	aes_key = None
 	pkey = None
 	pubkey = None
-	
+
 	def __init__(self):
 		if CRYPTOGRAPHY_MISSING:
 			self.active = False
@@ -61,7 +61,7 @@ class dhcrypto:
 			backend=default_backend()
 		)
 		self.aes_key = hkdf.derive(common_secret)
-		
+
 	def decryptMessage(self, result):
 		aes_iv = bytes(result[1])
 		encrypted_secret = bytes(result[2])
@@ -76,7 +76,7 @@ class dhcrypto:
 
 	def encryptMessage(self, message):
 		aes_iv = bytes(os.urandom(16))
-		
+
 		padder = padding.PKCS7(128).padder()
 		message = message.encode('utf-8')
 		padded_data = padder.update(message) + padder.finalize()

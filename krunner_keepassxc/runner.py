@@ -12,23 +12,23 @@ IFACE="org.kde.krunner1"
 
 
 class Runner(dbus.service.Object):
-	
+
 	kp = None
 	cp = None
-	
+
 	def __init__(self):
-		
+
 		DBusGMainLoop(set_as_default=True)
-		
+
 		sessionbus = dbus.SessionBus()
 		sessionbus.request_name(BUS_NAME, dbus.bus.NAME_FLAG_REPLACE_EXISTING)
 		bus_name = dbus.service.BusName(BUS_NAME, bus=sessionbus)
 		dbus.service.Object.__init__(self, bus_name, OBJ_PATH)
-		
+
 		self.kp = KeepassPasswords()
 		self.cp = Clipboard()
 
-	def run(self):	
+	def run(self):
 		loop = GLib.MainLoop()
 		loop.run()
 
@@ -39,7 +39,7 @@ class Runner(dbus.service.Object):
 
 	@dbus.service.method(IFACE, in_signature='s', out_signature='a(sssida{sv})')
 	def Match(self, query):
-		
+
 		if len(query) > 2:
 			# find entries that contain the query
 			items = [i for i in self.kp.labels if query.lower() in i.lower()]
@@ -49,9 +49,9 @@ class Runner(dbus.service.Object):
 			items = items[:5]
 			#		data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
 			return [(item,"Copy to clipboard: " + item,"object-unlocked",100,(1 - (i * 0.1)),{}) for i,item in enumerate(items)]
-		
+
 		return []
-		
+
 
 	@dbus.service.method(IFACE, in_signature='ss',)
 	def Run(self, matchId, actionId):
@@ -65,5 +65,5 @@ class Runner(dbus.service.Object):
 					print('neither xsel nor xclip seem to be installed', flush=True)
 				except Exception as e:
 					print(str(e), flush=True)
-				
+
 		return

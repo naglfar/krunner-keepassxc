@@ -30,7 +30,7 @@ after this krunner-keepassxc should already show up in krunner plugins but might
 edit [install/krunner-keepassxc_autostart.desktop](install/krunner-keepassxc_autostart.desktop) to include virtual env if needed
 and copy to ~/.config/autostart/
 # via systemd
-edit [install/krunner-keepassxc.service](install/krunner-keepassxc_novenv.service) to include virtual env if needed
+edit [install/krunner-keepassxc.service](install/krunner-keepassxc.service) to include virtual env if needed
 and copy to ~/.config/systemd/user/
 ```
 $ systemctl --user enable krunner-keepassxc && systemctl --user start krunner-keepassxc

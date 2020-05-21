@@ -1,8 +1,8 @@
 # krunner-keepassxc
 
 A small krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.org Secret Service dbus integration.
+Basically, type something into krunner and the plugin will suggest matching keepassxc entries to copy.
 Requires xclip or xsel to be installed for copying to clipboard, keepass has to be configured for secret service access (in both general and database settings).
-Transferring passwords through an encrypted session requires the python module cryptography to be installed, falls back on plaintext transmission.
 
 ## quick start using pip ##
 this will pull the files and dependencies (dbus-python, cryptography) into your global python installation

@@ -30,10 +30,10 @@ after this krunner-keepassxc should already show up in krunner plugins but might
 edit [install/krunner-keepassxc_autostart.desktop](install/krunner-keepassxc_autostart.desktop) to fit your scenario  
 and copy to ~/.config/autostart
 # via systemd
-edit path or use python -m in (install/krunner-keepassxc_novenv.service)[install/krunner-keepassxc_novenv.service]  
+edit path or use python -m in [install/krunner-keepassxc_novenv.service](install/krunner-keepassxc_novenv.service)  
 and copy to ~/.config/systemd/user/krunner-keepassxc.service
 # via systemd as venv (poetry installation)
-edit path in (install/krunner-keepassxc_venv.service)[install/krunner-keepassxc_venv.service]  
+edit path in [install/krunner-keepassxc_venv.service](install/krunner-keepassxc_venv.service)  
 and copy to ~/.config/systemd/user/krunner-keepassxc.service
 ```
 $ systemctl --user enable krunner-keepassxc && systemctl --user start krunner-keepassxc

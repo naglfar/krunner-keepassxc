@@ -3,15 +3,16 @@ name = "krunner-keepassxc"
 version = "1.0.0"
 description = ""
 authors = ["naglfar <stefan@mtztech.info>"]
+include = ["krunner.py", "keepass_cli.py"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-vext = "^0.7.3"
-"vext.gi" = "^0.7.0"
+python = "^3.5"
 dbus-python = "^1.2.16"
 cryptography = "^2.9.2"
 
 [tool.poetry.dev-dependencies]
+vext = "^0.7.3"
+"vext.gi" = "^0.7.0"
 pytest = "^5.2"
 
 [build-system]

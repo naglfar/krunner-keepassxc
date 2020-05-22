@@ -5,7 +5,7 @@ description = ""
 authors = ["naglfar <stefan@mtztech.info>"]
 
 [tool.poetry.dependencies]
-python = "^3.5"
+python = "^3.5,<3.9"
 dbus-python = "^1.2.16"
 cryptography = "^2.9.2"
 
@@ -13,11 +13,12 @@ cryptography = "^2.9.2"
 vext = "^0.7.3"
 "vext.gi" = "^0.7.0"
 pytest = "^5.2"
-
-[build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+pex = "^2.1.11"
 
 [tool.poetry.scripts]
 runner = "krunner_keepassxc.__main__:main"
 cli = "krunner_keepassxc.__main__:cli"
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+

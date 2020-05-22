@@ -118,6 +118,17 @@ six = "*"
 
 [[package]]
 category = "dev"
+description = "The PEX packaging toolchain."
+name = "pex"
+optional = false
+python-versions = ">=2.7,<3.9,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*"
+version = "2.1.11"
+
+[package.extras]
+subprocess = ["subprocess32 (>=3.2.7)"]
+
+[[package]]
+category = "dev"
 description = "plugin and hook calling mechanisms for python"
 name = "pluggy"
 optional = false
@@ -264,8 +275,8 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["pathlib2", "unittest2", "jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "2505e9e3625cb321b73bc44a0c702bde772ac0d80624da91f4be31bd47152851"
-python-versions = "^3.5"
+content-hash = "d38fd3e1a50e1b5e6f36a956d6f47e3eee99c33e26e636dfeb4bd39eb289d3a9"
+python-versions = "^3.5,<3.9"
 
 [metadata.files]
 atomicwrites = [
@@ -349,6 +360,10 @@ packaging = [
 pathlib2 = [
     {file = "pathlib2-2.3.5-py2.py3-none-any.whl", hash = "sha256:0ec8205a157c80d7acc301c0b18fbd5d44fe655968f5d947b6ecef5290fc35db"},
     {file = "pathlib2-2.3.5.tar.gz", hash = "sha256:6cd9a47b597b37cc57de1c05e56fb1a1c9cc9fab04fe78c29acd090418529868"},
+]
+pex = [
+    {file = "pex-2.1.11-py2.py3-none-any.whl", hash = "sha256:42661b4d9d7d1ac645993f115019945a391c40a125f5b5e678923d9de38b6786"},
+    {file = "pex-2.1.11.tar.gz", hash = "sha256:9fc8f1562676c537b4c7fe4a62ecaaa2803fa43b56aba2f2435d833eb6b6036a"},
 ]
 pluggy = [
     {file = "pluggy-0.13.1-py2.py3-none-any.whl", hash = "sha256:966c145cd83c96502c3c3868f50408687b38434af77734af1e9ca461a4081d2d"},

@@ -1,3 +1,5 @@
+# ~/.config/autostart/
+
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -5,6 +7,11 @@ Name=Runner
 Comment=Autostart entry krunner-keepassxc
 Keywords=Runner;Krunner
 Categories=Utilities
-Exec=python3 -m krunner_keepassxc # or /path/to/venv/bin/python -m krunner_keepassxc
+# as pex file
+#Exec=/path/to/krunner_keepassxc.pex
+# as global package
+#Exec=python3 -m krunner_keepassxc
+# in a virtual environment
+#Exec=/path/to/venv/bin/python -m krunner_keepassxc
 Icon=python
 StartupNotify=true

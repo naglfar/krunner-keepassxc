@@ -1,11 +1,16 @@
-#~/.config/systemd/user/
+# ~/.config/systemd/user/
 
 [Unit]
 Description=krunner-keepassxc python service
 
 [Service]
 Environment="DISPLAY=:0"
-ExecStart=python3 -m krunner_keepassxc # or /path/to/venv/bin/python -m krunner_keepassxc
+# as pex file
+#ExecStart=/path/to/krunner_keepassxc.pex
+# installed as global package
+#ExecStart=python3 -m krunner_keepassxc
+# in a virtual environment
+#ExecStart=/path/to/venv/bin/python -m krunner_keepassxc
 
 [Install]
 WantedBy=default.target

@@ -1,6 +1,4 @@
-#~/.local/share/kservices5/
-# seems to require restart before krunner send actual dbus calls,
-# even if the plugin already shows up in krunner settings
+# ~/.local/share/kservices5/
 
 [Desktop Entry]
 Name=KeepassXC to Clipboard

@@ -4,34 +4,42 @@ import argparse
 import dbus
 import os
 import time
+
+from typing import Dict, List, Optional
+
 from .dhcrypto import dhcrypto
 
 class KeepassPasswords:
 
-	#BUS_NAME = 'org.keepassxc.KeePassXC.MainWindow'
-	BUS_NAME = 'org.freedesktop.secrets'
+	#BUS_NAME: str = 'org.keepassxc.KeePassXC.MainWindow'
+	BUS_NAME: str = 'org.freedesktop.secrets'
 
-	bus = None
-	_session = None
-	lastCheck = None
-	_labels = []
-	_passwords = {}
+	bus: dbus._dbus.SessionBus
+	_session: Optional[str]
+	lastCheck: Optional[float]
+	_labels: List[str]
+	_passwords: Dict[str, dbus.ObjectPath]
 
-	crypto = None
+	crypto: dhcrypto
 
 	def __init__(self):
 		self.bus = dbus.SessionBus()
+		self._session = None
+		self.lastCheck = None
+
+		self._labels = []
+		self._passwords = {}
 
 		self.crypto = dhcrypto()
 
 	@property
-	def session(self):
+	def session(self) -> Optional[str]:
 		if not self._session:
 			secrets = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets')
 			iface = dbus.Interface(secrets, 'org.freedesktop.Secret.Service')
 
 			if not self.crypto.active:
-				output, sessionPath = iface.OpenSession('plain', '')
+				_output, sessionPath = iface.OpenSession('plain', '')
 			else:
 				server_pubkey, sessionPath = iface.OpenSession('dh-ietf1024-sha256-aes128-cbc-pkcs7', dbus.ByteArray(self.crypto.pubkey_as_bytes()))
 				self.crypto.set_server_public_key(server_pubkey)
@@ -48,12 +56,12 @@ class KeepassPasswords:
 			self.fetchData()
 
 	@property
-	def labels(self):
+	def labels(self) -> List[str]:
 		self.updateProperties()
 		return self._labels
 
 	@property
-	def passwords(self):
+	def passwords(self) -> Dict[str, dbus.ObjectPath]:
 		self.updateProperties()
 		return self._passwords
 
@@ -82,7 +90,7 @@ class KeepassPasswords:
 		self._labels = labels
 		self._passwords = passwords
 
-	def getSecret(self, label):
+	def getSecret(self, label: str) -> str:
 		s = self.session
 
 		path = self.passwords[label]

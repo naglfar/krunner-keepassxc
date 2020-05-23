@@ -25,10 +25,6 @@ class dhcryptoss:
 
 	active = True
 
-	aes_key = None
-	pkey = None
-	pubkey = None
-
 	def __init__(self):
 		self.pkey = int_from_bytes(os.urandom(0x80), 'big')
 		self.pubkey = pow(2, self.pkey, self.DH_PRIME_1024)

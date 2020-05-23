@@ -17,12 +17,15 @@ pex = "^2.1.11"
 shiv = "^0.1.2"
 radon = "^4.1.0"
 taskipy = "^1.2.1"
+mypy = "^0.770"
 
 [tool.poetry.scripts]
 runner = "krunner_keepassxc.__main__:main"
 cli = "krunner_keepassxc.__main__:cli"
+
 [tool.taskipy.tasks]
 test = "python -m unittest tests/test_*.py"
+mypy = "mypy --ignore-missing-imports --check-untyped-defs krunner_keepassxc tests"
 radon = "radon cc krunner_keepassxc"
 pex = """pex \
 		--disable-cache \

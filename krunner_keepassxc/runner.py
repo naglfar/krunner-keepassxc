@@ -3,6 +3,8 @@ from gi.repository import GLib
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 
+from typing import List
+
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
 
@@ -13,8 +15,8 @@ IFACE="org.kde.krunner1"
 
 class Runner(dbus.service.Object):
 
-	kp = None
-	cp = None
+	kp: KeepassPasswords
+	cp: Clipboard
 
 	def __init__(self):
 
@@ -33,12 +35,12 @@ class Runner(dbus.service.Object):
 		loop.run()
 
 	@dbus.service.method(IFACE, out_signature='a(sss)')
-	def Actions(self, msg):
+	def Actions(self, msg: str):
 		# FIXME: does not seem to get called at all
 		return ['','','']
 
 	@dbus.service.method(IFACE, in_signature='s', out_signature='a(sssida{sv})')
-	def Match(self, query):
+	def Match(self, query: str) -> List:
 
 		if len(query) > 2:
 			# find entries that contain the query
@@ -54,7 +56,7 @@ class Runner(dbus.service.Object):
 
 
 	@dbus.service.method(IFACE, in_signature='ss',)
-	def Run(self, matchId, actionId):
+	def Run(self, matchId: str, actionId: str):
 		# matchId is data from Match
 		if len(matchId) > 0:
 			secret = self.kp.getSecret(matchId)
@@ -65,5 +67,3 @@ class Runner(dbus.service.Object):
 					print('neither xsel nor xclip seem to be installed', flush=True)
 				except Exception as e:
 					print(str(e), flush=True)
-
-		return

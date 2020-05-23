@@ -2,6 +2,8 @@ import hmac
 import math
 import os
 
+from typing import Sequence, Tuple
+
 CRYPTOGRAPHY_MISSING = False
 try:
 	from cryptography.hazmat.backends import default_backend
@@ -30,11 +32,11 @@ class dhcrypto:
 		0x49, 0x28, 0x66, 0x51, 0xEC, 0xE6, 0x53, 0x81, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 	)
 
-	active = True
+	active:bool = True
 
-	aes_key = None
-	pkey = None
-	pubkey = None
+	aes_key:bytes
+	pkey:int
+	pubkey:int
 
 	def __init__(self):
 		if CRYPTOGRAPHY_MISSING:
@@ -46,10 +48,10 @@ class dhcrypto:
 			self.pkey = int_from_bytes(os.urandom(128), 'big')
 			self.pubkey = pow(2, self.pkey, self.DH_PRIME_1024)
 
-	def pubkey_as_bytes(self):
+	def pubkey_as_bytes(self) -> bytes:
 		return int_to_bytes(self.pubkey)
 
-	def set_server_public_key(self, server_public_key):
+	def set_server_public_key(self, server_public_key: Sequence):
 		common_secret = pow(int_from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
 		common_secret = int_to_bytes(common_secret)
 
@@ -62,7 +64,7 @@ class dhcrypto:
 		)
 		self.aes_key = hkdf.derive(common_secret)
 
-	def decryptMessage(self, result):
+	def decryptMessage(self, result: Tuple[str,bytes,bytes]) -> str:
 		aes_iv = bytes(result[1])
 		encrypted_secret = bytes(result[2])
 
@@ -74,12 +76,12 @@ class dhcrypto:
 		unpadded_data = unpadder.update(padded_data) + unpadder.finalize()
 		return unpadded_data.decode('utf-8')
 
-	def encryptMessage(self, message):
+	def encryptMessage(self, message: str) -> Tuple[str,bytes,bytes]:
 		aes_iv = bytes(os.urandom(16))
 
 		padder = padding.PKCS7(128).padder()
-		message = message.encode('utf-8')
-		padded_data = padder.update(message) + padder.finalize()
+		message_bytes = message.encode('utf-8')
+		padded_data = padder.update(message_bytes) + padder.finalize()
 
 		cipher = Cipher(algorithms.AES(self.aes_key), modes.CBC(aes_iv), backend=default_backend())
 		encryptor = cipher.encryptor()

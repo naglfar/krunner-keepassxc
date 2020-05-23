@@ -1,28 +1,34 @@
 import sys
 import subprocess
 
+from typing import Tuple, Callable
+
 class Clipboard:
 
 	def __init__(self):
 		if self._executable_exists("xclip"):
-			self.init_xclip_clipboard()
+			copy, paste = self.init_xclip_clipboard()
 		elif self._executable_exists("xsel"):
-			self.init_xsel_clipboard()
+			copy, paste = self.init_xsel_clipboard()
 
-	def copy(self, text, primary=False):
+		# FIXME: mypy issue #2427
+		if copy: setattr(self, 'copy', copy)
+		if paste: setattr(self, 'paste', paste)
+
+	def copy(self, text: str, primary: bool=False):
 		raise NotImplementedError
 
-	def paste(self, text, primary=False):
+	def paste(self, text: str, primary: bool=False):
 		raise NotImplementedError
 
-	def _executable_exists(self, name):
+	def _executable_exists(self, name: str):
 		return subprocess.call(['which', name], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
 
-	def init_xclip_clipboard(self):
-		DEFAULT_SELECTION='c'
-		PRIMARY_SELECTION='p'
+	def init_xclip_clipboard(self) -> Tuple[Callable,Callable]:
+		DEFAULT_SELECTION:str = 'c'
+		PRIMARY_SELECTION:str = 'p'
 
-		def copy_xclip(text, primary=False):
+		def copy_xclip(text: str, primary: bool=False):
 			selection=DEFAULT_SELECTION
 			if primary:
 				selection=PRIMARY_SELECTION
@@ -30,7 +36,7 @@ class Clipboard:
 			stdout, stderr = p.communicate(input=text.encode('utf-8'))
 			if stderr: print(stderr, file=sys.stderr)
 
-		def paste_xclip(primary=False):
+		def paste_xclip(primary: bool=False) -> str:
 			selection=DEFAULT_SELECTION
 			if primary:
 				selection=PRIMARY_SELECTION
@@ -42,13 +48,13 @@ class Clipboard:
 			# Intentionally ignore extraneous output on stderr when clipboard is empty
 			return stdout.decode('utf-8')
 
-		self.copy, self.paste = copy_xclip, paste_xclip
+		return copy_xclip, paste_xclip
 
-	def init_xsel_clipboard(self):
-		DEFAULT_SELECTION='-b'
-		PRIMARY_SELECTION='-p'
+	def init_xsel_clipboard(self) -> Tuple[Callable,Callable]:
+		DEFAULT_SELECTION: str = '-b'
+		PRIMARY_SELECTION: str = '-p'
 
-		def copy_xsel(text, primary=False):
+		def copy_xsel(text: str, primary: bool=False):
 			selection_flag = DEFAULT_SELECTION
 			if primary:
 				selection_flag = PRIMARY_SELECTION
@@ -56,7 +62,7 @@ class Clipboard:
 			stdout, stderr = p.communicate(input=text.encode('utf-8'))
 			if stderr: print(stderr, file=sys.stderr)
 
-		def paste_xsel(primary=False):
+		def paste_xsel(primary: bool=False):
 			selection_flag = DEFAULT_SELECTION
 			if primary:
 				selection_flag = PRIMARY_SELECTION
@@ -64,4 +70,4 @@ class Clipboard:
 			stdout, stderr = p.communicate()
 			return stdout.decode('utf-8')
 
-		self.copy, self.paste = copy_xsel, paste_xsel
+		return copy_xsel, paste_xsel

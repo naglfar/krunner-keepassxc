@@ -3,15 +3,14 @@
 A small krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.org Secret Service dbus integration.
 Basically, type something into krunner and the plugin will suggest matching keepassxc entries to copy.
 Requires xclip or xsel to be installed for copying to clipboard, keepass has to be configured for secret service access (in both general and database settings).
-Requires at least Python3.5
+Requires at least Python3.5, running the .pyz file requires python 3.6.
 
-## quick start using pex file ##
-Just download [krunner_keepassxc.pex](https://github.com/naglfar/krunner-keepassxc/releases/download/1.0.0/krunner_keepassxc.pex) and you're good to go!  
-Start with 
+## quick start using pex or pyz file ##
+Just download [krunner_keepassxc.pex](https://github.com/naglfar/krunner-keepassxc/releases/download/1.0.0/krunner_keepassxc.pex) or [krunner_keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.0.0/krunner_keepassxc.pyz) and you're good to go!  
+They are executable files you can just run
 ```
-$ ./krunner_keepassxc.pex
-# or
-$ python3 krunner_keepassxc.pex
+$ ./krunner_keepassxc.pex	# or do $ python krunner_keepassxc.pex
+$ ./krunner_keepassxc.pyz	# or do $ python krunner_keepassxc.pyz
 ```
 
 ## quick start using pip ##

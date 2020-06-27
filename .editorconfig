@@ -1,6 +1,6 @@
 root = true
 
-[*]
+[*, /tests/*]
 charset = utf-8
 indent_style = tabs
 insert_final_newline = true
@@ -9,3 +9,11 @@ trim_trailing_whitespace = true
 [*.md]
 max_line_length = off
 trim_trailing_whitespace = false
+
+[*/__pycache__/**]
+charset = none
+end_of_line = none
+insert_final_newline = none
+trim_trailing_whitespace = none
+indent_style = none
+indent_size = none

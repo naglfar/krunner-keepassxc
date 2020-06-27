@@ -18,14 +18,18 @@ shiv = "^0.1.2"
 radon = "^4.1.0"
 taskipy = "^1.2.1"
 mypy = "^0.770"
+pylint = "^2.5.2"
+rope = "^0.17.0"
+bandit = "^1.6.2"
 
 [tool.poetry.scripts]
 runner = "krunner_keepassxc.__main__:main"
 cli = "krunner_keepassxc.__main__:cli"
 
 [tool.taskipy.tasks]
-test = "python -m unittest tests/test_*.py"
+tests = "python -m unittest tests/test_*.py"
 mypy = "mypy --ignore-missing-imports --check-untyped-defs krunner_keepassxc tests"
+lint = "pylint krunner_keepassxc"
 radon = "radon cc krunner_keepassxc"
 pex = """pex \
 		--disable-cache \

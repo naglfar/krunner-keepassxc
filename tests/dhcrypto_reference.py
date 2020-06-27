@@ -1,11 +1,10 @@
 import hmac
 import math
 import os
+from hashlib import sha256
 
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.utils import int_from_bytes, int_to_bytes
 
 #crypto from SecretStorage for testing
@@ -28,6 +27,7 @@ class dhcryptoss:
 	def __init__(self):
 		self.pkey = int_from_bytes(os.urandom(0x80), 'big')
 		self.pubkey = pow(2, self.pkey, self.DH_PRIME_1024)
+		self.aes_key = b''
 
 	def int_to_bytes(self, number):
 		return number.to_bytes(math.ceil(number.bit_length() / 8), 'big')
@@ -36,7 +36,6 @@ class dhcryptoss:
 		return list(int_to_bytes(self.pubkey))
 
 	def set_server_public_key(self, server_public_key):
-		from hashlib import sha256
 		common_secret = pow(int_from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
 		common_secret = self.int_to_bytes(common_secret)
 		# Prepend NULL bytes if needed
@@ -48,7 +47,7 @@ class dhcryptoss:
 		# Resulting AES key should be 128-bit
 		self.aes_key = output_block[:0x10]
 
-	def decryptMessage(self, secret):
+	def decrypt_message(self, secret):
 		aes = algorithms.AES(self.aes_key)
 		aes_iv = bytes(secret[1])
 		decryptor = Cipher(aes, modes.CBC(aes_iv), default_backend()).decryptor()
@@ -57,7 +56,7 @@ class dhcryptoss:
 		assert isinstance(padded_secret, bytes)
 		return padded_secret[:-padded_secret[-1]].decode('utf-8')
 
-	def encryptMessage(self, secret):
+	def encrypt_message(self, secret):
 		if isinstance(secret, str):
 			secret = secret.encode('utf-8')
 		elif not isinstance(secret, bytes):

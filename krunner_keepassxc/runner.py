@@ -30,40 +30,55 @@ class Runner(dbus.service.Object):
 		self.kp = KeepassPasswords()
 		self.cp = Clipboard()
 
-	def run(self):
+	def start(self):
 		loop = GLib.MainLoop()
 		loop.run()
 
+	def copy_to_clipboard(self, string: str):
+		if string:
+			try:
+				self.cp.copy(string)
+			except NotImplementedError as e:
+				print('neither xsel nor xclip seem to be installed', flush=True)
+			except Exception as e:
+				print(str(e), flush=True)
+
 	@dbus.service.method(IFACE, out_signature='a(sss)')
-	def Actions(self, msg: str):
-		# FIXME: does not seem to get called at all
-		return ['','','']
+	def Actions(self):
+		# define our secondary action(s)
+		return [
+			('user', 'copy username', 'username-copy'),
+		]
 
 	@dbus.service.method(IFACE, in_signature='s', out_signature='a(sssida{sv})')
 	def Match(self, query: str) -> List:
 
 		if len(query) > 2:
+
 			# find entries that contain the query
 			items = [i for i in self.kp.labels if query.lower() in i.lower()]
 			# sort entries starting with the query on top
 			items.sort(key=lambda item: (not item.startswith(query), item))
 			# max 5 entries
 			items = items[:5]
-			#		data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
-			return [(item,"Copy to clipboard: " + item,"object-unlocked",100,(1 - (i * 0.1)),{}) for i,item in enumerate(items)]
+
+			return [
+			#	data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
+				(item, "Copy to clipboard: " + item, "object-unlocked", 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(item) }) for i, item in enumerate(items)
+			]
 
 		return []
 
 
 	@dbus.service.method(IFACE, in_signature='ss',)
 	def Run(self, matchId: str, actionId: str):
-		# matchId is data from Match
+		# matchId is data from Match, actionId is secondary action or empty for primary
 		if len(matchId) > 0:
-			secret = self.kp.getSecret(matchId)
-			if secret:
-				try:
-					self.cp.copy(secret)
-				except NotImplementedError as e:
-					print('neither xsel nor xclip seem to be installed', flush=True)
-				except Exception as e:
-					print(str(e), flush=True)
+			if actionId == 'user':
+				user = self.kp.get_username(matchId)	
+				self.copy_to_clipboard(user)
+			else:
+				secret = self.kp.get_secret(matchId)
+				self.copy_to_clipboard(secret)
+
+				

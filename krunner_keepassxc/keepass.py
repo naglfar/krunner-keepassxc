@@ -1,5 +1,7 @@
 #!/bin/env python3
 import time
+import os
+import subprocess
 from typing import Dict, List, Optional
 import dbus
 
@@ -15,7 +17,7 @@ class KeepassPasswords:
 	last_check: Optional[float]
 	_labels: List[str]
 	_attributes: Dict[str, Dict]
-	_passwords: Dict[str, dbus.ObjectPath]
+	_entries: Dict[str, dbus.ObjectPath]
 
 	crypto: dhcrypto
 
@@ -26,7 +28,7 @@ class KeepassPasswords:
 
 		self._labels = []
 		self._attributes = {}
-		self._passwords = {}
+		self._entries = {}
 
 		self.crypto = dhcrypto()
 
@@ -46,11 +48,13 @@ class KeepassPasswords:
 
 		return self._session
 
+	def open_keepass(self):
+		subprocess.Popen(['keepassxc'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setpgrp)
 
 	def update_properties(self):
 		now = time.time()
 		# cache data for 1 minute if passwords not empty
-		if len(self._passwords) == 0 or not self.last_check or (now - 60 * 1 ) > self.last_check:
+		if not self.last_check or (len(self._entries) == 0 and now - 5 > self.last_check) or ((now - 60 * 1 ) > self.last_check):
 			self.last_check = now
 			self.fetch_data()
 
@@ -67,39 +71,43 @@ class KeepassPasswords:
 	@property
 	def passwords(self) -> Dict[str, dbus.ObjectPath]:
 		self.update_properties()
-		return self._passwords
+		return self._entries
 
 
 	def fetch_data(self):
 
-		passwords = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets/collection/passwords')
-
-		#print(passwords.Introspect())
-
-		iface = dbus.Interface(passwords, 'org.freedesktop.DBus.Properties')
-
-		items = iface.GetAll('org.freedesktop.Secret.Collection')
-
 		labels = []
 		attributes = {}
-		passwords = {}
-		for item in items.get('Items'):
-			password = self.bus.get_object(self.BUS_NAME, item)
-			#print(password.Introspect())
-			iface2 = dbus.Interface(password, 'org.freedesktop.DBus.Properties')
-			items = iface2.GetAll('org.freedesktop.Secret.Item')
-			label = str(items.get('Label'))
-			labels.append(label)
+		entries = {}
+
+		try:
+			passwords = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets/collection/passwords')
+			#print(passwords.Introspect())
+			iface = dbus.Interface(passwords, 'org.freedesktop.DBus.Properties')
+			items = iface.GetAll('org.freedesktop.Secret.Collection')
+			
+			for item in items.get('Items'):
+				password = self.bus.get_object(self.BUS_NAME, item)
+				#print(password.Introspect())
+				iface2 = dbus.Interface(password, 'org.freedesktop.DBus.Properties')
+				items = iface2.GetAll('org.freedesktop.Secret.Item')
+				label = str(items.get('Label'))
+				labels.append(label)
 
 
-			attr = items.get('Attributes')
-			attributes[label] = attr
+				attr = items.get('Attributes')
+				attributes[label] = attr
 
-			passwords[label] = item
+				entries[label] = item
 
-		self._labels = labels
-		self._attributes = attributes
-		self._passwords = passwords
+			self._labels = labels
+			self._attributes = attributes
+			self._entries = entries
+
+		except dbus.exceptions.DBusException as e:
+			# keepassxc not running	or database closed
+			pass
+
 
 	def get_attribute(self, label: str, attribute_name: str) -> str:
 		attribute_value = ""

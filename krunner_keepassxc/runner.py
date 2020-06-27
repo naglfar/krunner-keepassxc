@@ -46,34 +46,50 @@ class Runner(dbus.service.Object):
 	@dbus.service.method(IFACE, out_signature='a(sss)')
 	def Actions(self):
 		# define our secondary action(s)
-		return [
-			('user', 'copy username', 'username-copy'),
-		]
+		if len(self.kp.labels) == 0:
+			return []
+		else:
+			return [
+				('user', 'copy username', 'username-copy'),
+			]
 
 	@dbus.service.method(IFACE, in_signature='s', out_signature='a(sssida{sv})')
 	def Match(self, query: str) -> List:
+		
+		matches = []
 
 		if len(query) > 2:
 
-			# find entries that contain the query
-			items = [i for i in self.kp.labels if query.lower() in i.lower()]
-			# sort entries starting with the query on top
-			items.sort(key=lambda item: (not item.startswith(query), item))
-			# max 5 entries
-			items = items[:5]
+			if len(self.kp.labels) == 0:
+				# no passwords found, show open keepass message
+				matches = [
+					('', "No passwords or database locked", "object-unlocked", 100, 0.1, { 'subtext': 'Open KeepassXC' })
+				]
 
-			return [
-			#	data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
-				(item, "Copy to clipboard: " + item, "object-unlocked", 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(item) }) for i, item in enumerate(items)
-			]
+			else:
+				# find entries that contain the query
+				items = [i for i in self.kp.labels if query.lower() in i.lower()]
+				# sort entries starting with the query on top
+				items.sort(key=lambda item: (not item.startswith(query), item))
+				# max 5 entries
+				items = items[:5]
 
-		return []
+				matches = [
+				#	data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
+					(item, "Copy to clipboard: " + item, "object-unlocked", 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(item) }) for i, item in enumerate(items)
+				]
+
+		return matches
 
 
 	@dbus.service.method(IFACE, in_signature='ss',)
 	def Run(self, matchId: str, actionId: str):
 		# matchId is data from Match, actionId is secondary action or empty for primary
-		if len(matchId) > 0:
+		if len(matchId) == 0:
+
+			self.kp.open_keepass()
+
+		else:
 			if actionId == 'user':
 				user = self.kp.get_username(matchId)	
 				self.copy_to_clipboard(user)

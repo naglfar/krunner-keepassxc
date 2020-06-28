@@ -1,4 +1,7 @@
 #!/bin/env python3
+import time
+import signal
+
 from gi.repository import GLib
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
@@ -17,6 +20,7 @@ class Runner(dbus.service.Object):
 
 	kp: KeepassPasswords
 	cp: Clipboard
+	last_match: float
 
 	def __init__(self):
 
@@ -29,10 +33,38 @@ class Runner(dbus.service.Object):
 
 		self.kp = KeepassPasswords()
 		self.cp = Clipboard()
+		self.last_match = None
 
 	def start(self):
+
 		loop = GLib.MainLoop()
+
+		# clear saved data 15 seconds after last krunner match call
+		def check_cache():
+			if self.last_match:
+				now = time.time()
+				if now - 15 > self.last_match:
+					self.last_match = None
+					self.kp.clear_cache()
+
+			# return true to keep getting called, false to stop
+			return True
+
+		GLib.timeout_add(1000, check_cache)
+
+		# handle sigint
+		def sigint_handler(sig, frame):
+			if sig == signal.SIGINT:
+				print(' Quitting krunner-keepassxc')
+				loop.quit()
+			else:
+				raise ValueError("Undefined handler for '{}'".format(sig))
+
+		signal.signal(signal.SIGINT, sigint_handler)
+
+		# start the main loop
 		loop.run()
+
 
 	def copy_to_clipboard(self, string: str):
 		if string:
@@ -79,6 +111,8 @@ class Runner(dbus.service.Object):
 					(item, "Copy to clipboard: " + item, "object-unlocked", 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(item) }) for i, item in enumerate(items)
 				]
 
+				self.last_match = time.time()
+
 		return matches
 
 
@@ -100,5 +134,7 @@ class Runner(dbus.service.Object):
 			
 			# clear all cached data on action
 			self.kp.clear_cache()
+			# clear last_match to skip needless check_cache
+			self.last_match = None
 
 				

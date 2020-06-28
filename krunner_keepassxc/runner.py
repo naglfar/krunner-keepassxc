@@ -85,16 +85,20 @@ class Runner(dbus.service.Object):
 	@dbus.service.method(IFACE, in_signature='ss',)
 	def Run(self, matchId: str, actionId: str):
 		# matchId is data from Match, actionId is secondary action or empty for primary
+		
 		if len(matchId) == 0:
-
+			# empty matchId means keepassxc isn't running or database is locked
 			self.kp.open_keepass()
 
 		else:
 			if actionId == 'user':
-				user = self.kp.get_username(matchId)	
+				user = self.kp.get_username(matchId)
 				self.copy_to_clipboard(user)
 			else:
 				secret = self.kp.get_secret(matchId)
 				self.copy_to_clipboard(secret)
+			
+			# clear all cached data on action
+			self.kp.clear_cache()
 
 				

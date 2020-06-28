@@ -53,8 +53,8 @@ class KeepassPasswords:
 
 	def update_properties(self):
 		now = time.time()
-		# cache data for 1 minute if passwords not empty
-		if not self.last_check or (len(self._entries) == 0 and now - 5 > self.last_check) or ((now - 60 * 1 ) > self.last_check):
+		# try to fetch every 5s if no entries, 30s when cached entries exist
+		if not self.last_check or (len(self._entries) == 0 and now - 5 > self.last_check) or ((now - 30 * 1 ) > self.last_check):
 			self.last_check = now
 			self.fetch_data()
 
@@ -88,7 +88,6 @@ class KeepassPasswords:
 			
 			for item in items.get('Items'):
 				password = self.bus.get_object(self.BUS_NAME, item)
-				#print(password.Introspect())
 				iface2 = dbus.Interface(password, 'org.freedesktop.DBus.Properties')
 				items = iface2.GetAll('org.freedesktop.Secret.Item')
 				label = str(items.get('Label'))
@@ -100,14 +99,18 @@ class KeepassPasswords:
 
 				entries[label] = item
 
-			self._labels = labels
-			self._attributes = attributes
-			self._entries = entries
-
 		except dbus.exceptions.DBusException as e:
 			# keepassxc not running	or database closed
 			pass
 
+		self._labels = labels
+		self._attributes = attributes
+		self._entries = entries
+
+	def clear_cache(self):
+		self._labels = []
+		self._attributes = {}
+		self._entries = {}
 
 	def get_attribute(self, label: str, attribute_name: str) -> str:
 		attribute_value = ""
@@ -130,7 +133,6 @@ class KeepassPasswords:
 
 		path = self.passwords[label]
 		password = self.bus.get_object(self.BUS_NAME, path)
-		#print(password.Introspect())
 		iface = dbus.Interface(password, 'org.freedesktop.Secret.Item')
 
 		result = iface.GetSecret(str(session))

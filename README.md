@@ -6,20 +6,20 @@ Requires xclip or xsel to be installed for copying to clipboard, keepass has to 
 Requires at least Python3.5, running the .pyz file requires python 3.6.
 
 ## quick start using pex or pyz file ##
-Just download [krunner_keepassxc.pex](https://github.com/naglfar/krunner-keepassxc/releases/download/1.2.0/krunner_keepassxc.pex) or [krunner_keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.2.0/krunner_keepassxc.pyz) and you're good to go!  
+Just download [krunner-keepassxc.pex](https://github.com/naglfar/krunner-keepassxc/releases/download/1.3.0/krunner-keepassxc.pex) or [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.3.0/krunner-keepassxc.pyz) and you're good to go!  
 They are executable files you can just run
 ```
-$ ./krunner_keepassxc.pex	# or do $ python krunner_keepassxc.pex
-$ ./krunner_keepassxc.pyz	# or do $ python krunner_keepassxc.pyz
+$ ./krunner-keepassxc.pex	# or do $ python krunner-keepassxc.pex
+$ ./krunner-keepassxc.pyz	# or do $ python krunner-keepassxc.pyz
 ```
 
 ## quick start using pip ##
 this will pull the files and dependencies (dbus-python, cryptography) into your global python installation
 ```
-$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/1.2.0/krunner_keepassxc-1.2.0-py3-none-any.whl
+$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/1.3.0/krunner_-_keepassxc-1.3.0-py3-none-any.whl
 # see if it works:
-$ python3 -m krunner_keepassxc cli -l  # should list all the password labels in your database
-$ python3 -m krunner_keepassxc  # will start the dbus service for communicating with krunner
+$ python3 -m krunner-keepassxc cli -l  # should list all the password labels in your database
+$ python3 -m krunner-keepassxc  # will start the dbus service for communicating with krunner
 ```
 
 ## using poetry ## 

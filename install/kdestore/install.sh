@@ -1,6 +1,12 @@
 #!/bin/bash
 pwd=$(pwd)
-pyz="$pwd/krunner_keepassxc.pyz"
+
+bin="$HOME/.local/bin/"
+if [ ! -d "${bin}" ]; then
+	mkdir -p "${bin}"
+fi
+cp "$pwd/krunner-keepassxc.pyz" "$bin"
+pyz="$bin/krunner-keepassxc.pyz run"
 
 kservices_path=$(kf5-config --path services | awk -F: '{print $1}')
 if [[ -z "${kservices_path}" ]]; then

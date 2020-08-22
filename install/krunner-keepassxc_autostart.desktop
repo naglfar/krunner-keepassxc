@@ -8,10 +8,10 @@ Comment=Autostart entry krunner-keepassxc
 Keywords=Runner;Krunner
 Categories=Utilities
 # as pex file
-#Exec=/path/to/krunner_keepassxc.pex
+#Exec=/path/to/krunner_keepassxc.pex run
 # as global package
-#Exec=python3 -m krunner_keepassxc
+#Exec=python3 -m krunner_keepassxc run
 # in a virtual environment
-#Exec=/path/to/venv/bin/python -m krunner_keepassxc
+#Exec=/path/to/venv/bin/python -m krunner_keepassxc run
 Icon=python
 StartupNotify=true

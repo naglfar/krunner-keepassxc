@@ -1,7 +1,6 @@
 #!/bin/bash
 pwd=$(pwd)
 kservices_path=$(kf5-config --path services | awk -F: '{print $1}')
-rm "${kservices_path}/krunner-keepassxc.desktop"
 
 if [ -d "/run/systemd/system" ]
 then
@@ -14,10 +13,13 @@ then
 	rm -f "${unitpath}/krunner-keepassxc.service"
 else
 	# autostart
-	pkill -f "krunner_keepassxc\.pyz"
+	pkill -f "krunner-keepassxc\.pyz"
 	autostartpath="~/.local/share/autostart"
 	rm -f "${autostartpath}/krunner-keepassxc_autostart.desktop"
 fi
+
+rm "${kservices_path}/krunner-keepassxc.desktop"
+rm "$HOME/.local/bin/krunner-keepassxc.pyz"
 
 kquitapp5 krunner
 kstart5 --windowclass krunner krunner

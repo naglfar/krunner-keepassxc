@@ -6,11 +6,11 @@ Description=krunner-keepassxc python service
 [Service]
 Environment="DISPLAY=:0"
 # as pex file
-#ExecStart=/path/to/krunner_keepassxc.pex
+#ExecStart=/path/to/krunner_keepassxc.pex run
 # installed as global package
-#ExecStart=python3 -m krunner_keepassxc
+#ExecStart=python3 -m krunner_keepassxc run
 # in a virtual environment
-#ExecStart=/path/to/venv/bin/python -m krunner_keepassxc
+#ExecStart=/path/to/venv/bin/python -m krunner_keepassxc run
 
 [Install]
 WantedBy=default.target

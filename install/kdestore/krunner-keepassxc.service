@@ -1,0 +1,11 @@
+# ~/.config/systemd/user/
+
+[Unit]
+Description=krunner-keepassxc python service
+
+[Service]
+Environment="DISPLAY=:0"
+ExecStart=##execstart##
+
+[Install]
+WantedBy=default.target

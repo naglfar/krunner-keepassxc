@@ -43,6 +43,8 @@ shiv = """shiv \
 		-e krunner_keepassxc.__main__:main \
 		--output-file dist/krunner_keepassxc.pyz \
 		."""
+store = """tar czf dist/krunner-keepassxc.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner_keepassxc.pyz"""
+
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"

@@ -20,6 +20,7 @@ class Runner(dbus.service.Object):
 
 	kp: KeepassPasswords
 	cp: Clipboard
+	empty_action: str = ""
 	last_match: float
 
 	def __init__(self):
@@ -92,12 +93,28 @@ class Runner(dbus.service.Object):
 
 		if len(query) > 2:
 
-			if len(self.kp.labels) == 0:
-				# no passwords found, show open keepass message
+			if not self.cp.can_clip:
+				self.cp.check_executables()
+
+			if not self.cp.can_clip:
 				matches = [
-					('', "No passwords or database locked", "object-unlocked", 100, 0.1, { 'subtext': 'Open KeepassXC' })
+					('', "Neither xsel nor xclip installed", "object-unlocked", 100, 0.1, {})
 				]
 
+			elif len(self.kp.labels) == 0:
+				print("1")
+				if not self.kp.is_keepass_installed():
+					print("2")
+					matches = [
+						('', "KeepassXC does not seem to be installed", "object-unlocked", 100, 0.1, {})
+					]
+				else:
+					print("3")
+					# no passwords found, show open keepass message
+					matches = [
+						('', "No passwords or database locked", "object-unlocked", 100, 0.1, { 'subtext': 'Open KeepassXC' })
+					]
+					self.empty_action = 'open-keepassxc'
 			else:
 				# find entries that contain the query
 				items = [i for i in self.kp.labels if query.lower() in i.lower()]
@@ -121,9 +138,9 @@ class Runner(dbus.service.Object):
 		# matchId is data from Match, actionId is secondary action or empty for primary
 		
 		if len(matchId) == 0:
-			# empty matchId means keepassxc isn't running or database is locked
-			self.kp.open_keepass()
-
+			# empty matchId means error of some kind
+			if self.empty_action == 'open-keepassxc':
+				self.kp.open_keepass()
 		else:
 			if actionId == 'user':
 				user = self.kp.get_username(matchId)
@@ -136,5 +153,7 @@ class Runner(dbus.service.Object):
 			self.kp.clear_cache()
 			# clear last_match to skip needless check_cache
 			self.last_match = None
+
+		self.empty_action = ""
 
 				

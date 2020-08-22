@@ -5,11 +5,20 @@ from typing import Tuple, Callable
 
 class Clipboard:
 
+	can_clip: bool
+
 	def __init__(self):
+		self.check_executables()
+
+	def check_executables(self):
+		copy, paste = None, None
+		self.can_clip = True
 		if self._executable_exists("xclip"):
 			copy, paste = self.init_xclip_clipboard()
 		elif self._executable_exists("xsel"):
 			copy, paste = self.init_xsel_clipboard()
+		else:
+			self.can_clip = False
 
 		# FIXME: mypy issue #2427
 		if copy:

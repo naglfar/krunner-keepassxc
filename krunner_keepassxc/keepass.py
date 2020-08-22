@@ -48,6 +48,9 @@ class KeepassPasswords:
 
 		return self._session
 
+	def is_keepass_installed(self):
+		return subprocess.call(['which', "keepassxc"], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
+
 	def open_keepass(self):
 		subprocess.Popen(['keepassxc'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setpgrp)
 

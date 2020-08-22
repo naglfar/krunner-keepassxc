@@ -1,4 +1,4 @@
-# krunner-keepassxc
+# <img src="https://raw.githubusercontent.com/naglfar/krunner-keepassxc/master/logo.svg" width="64" height="64"/> krunner-keepassxc
 
 A small krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.org Secret Service dbus integration.
 Basically, type something into krunner and the plugin will suggest matching keepassxc entries to copy.

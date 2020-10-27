@@ -7,7 +7,7 @@ authors = ["naglfar <stefan@mtztech.info>"]
 [tool.poetry.dependencies]
 python = "^3.6,<3.9"
 dbus-python = "^1.2.16"
-cryptography = "^2.9.2"
+cryptography = "^3.2"
 
 [tool.poetry.dev-dependencies]
 vext = "^0.7.3"

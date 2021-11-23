@@ -84,7 +84,7 @@ class KeepassPasswords:
 		entries = {}
 
 		try:
-			passwords = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets/collection/passwords')
+			passwords = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets/collection/Passwords')
 			#print(passwords.Introspect())
 			iface = dbus.Interface(passwords, 'org.freedesktop.DBus.Properties')
 			items = iface.GetAll('org.freedesktop.Secret.Collection')

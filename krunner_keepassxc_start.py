@@ -26,7 +26,7 @@ def main():
 
 	else:
 		runner = Runner()
-		runner.run()
+		runner.start()
 
 
 if __name__ == '__main__':

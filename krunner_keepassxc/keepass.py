@@ -13,8 +13,8 @@ class KeepassPasswords:
 		'org.keepassxc.KeePassXC.MainWindow',
 		'org.freedesktop.secrets'
 	]
-	BUS_NAME: str = None
-	PASSWORDS_PATH: str = None
+	BUS_NAME: str = ''
+	PASSWORDS_PATH: str = ''
 
 
 	bus: dbus._dbus.SessionBus

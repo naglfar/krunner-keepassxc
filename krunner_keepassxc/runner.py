@@ -35,7 +35,7 @@ class Runner(dbus.service.Object):
 
 		self.kp = KeepassPasswords()
 		self.cp = Clipboard()
-		self.last_match = None
+		self.last_match = 0
 
 	def start(self):
 
@@ -49,7 +49,7 @@ class Runner(dbus.service.Object):
 			if self.last_match:
 				now = time.time()
 				if now - 15 > self.last_match:
-					self.last_match = None
+					self.last_match = 0
 					self.kp.clear_cache()
 
 			# return true to keep getting called, false to stop
@@ -93,7 +93,7 @@ class Runner(dbus.service.Object):
 	@dbus.service.method(IFACE, in_signature='s', out_signature='a(sssida{sv})')
 	def Match(self, query: str) -> List:
 		
-		matches = []
+		matches:List = []
 
 		if len(query) > 2:
 
@@ -157,7 +157,7 @@ class Runner(dbus.service.Object):
 			# clear all cached data on action
 			self.kp.clear_cache()
 			# clear last_match to skip needless check_cache
-			self.last_match = None
+			self.last_match = 0
 
 		self.empty_action = ""
 

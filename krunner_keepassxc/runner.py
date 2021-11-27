@@ -5,6 +5,7 @@ import signal
 from gi.repository import GLib
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
+from setproctitle import setproctitle, setthreadtitle
 
 from typing import List
 
@@ -38,6 +39,9 @@ class Runner(dbus.service.Object):
 
 	def start(self):
 
+		setproctitle('krunner-keepassxc')
+		setthreadtitle('krunner-keepassxc')
+		
 		loop = GLib.MainLoop()
 
 		# clear saved data 15 seconds after last krunner match call
@@ -102,14 +106,15 @@ class Runner(dbus.service.Object):
 				]
 
 			elif len(self.kp.labels) == 0:
-				print("1")
 				if not self.kp.is_keepass_installed():
-					print("2")
 					matches = [
 						('', "KeepassXC does not seem to be installed", "object-unlocked", 100, 0.1, {})
 					]
+				elif not self.kp.BUS_NAME:
+					matches = [
+						('', "DBUS bus name not found", "object-unlocked", 100, 0.1, { })
+					]
 				else:
-					print("3")
 					# no passwords found, show open keepass message
 					matches = [
 						('', "No passwords or database locked", "object-unlocked", 100, 0.1, { 'subtext': 'Open KeepassXC' })
@@ -136,7 +141,7 @@ class Runner(dbus.service.Object):
 	@dbus.service.method(IFACE, in_signature='ss',)
 	def Run(self, matchId: str, actionId: str):
 		# matchId is data from Match, actionId is secondary action or empty for primary
-		
+
 		if len(matchId) == 0:
 			# empty matchId means error of some kind
 			if self.empty_action == 'open-keepassxc':
@@ -148,7 +153,7 @@ class Runner(dbus.service.Object):
 			else:
 				secret = self.kp.get_secret(matchId)
 				self.copy_to_clipboard(secret)
-			
+
 			# clear all cached data on action
 			self.kp.clear_cache()
 			# clear last_match to skip needless check_cache
@@ -156,4 +161,3 @@ class Runner(dbus.service.Object):
 
 		self.empty_action = ""
 
-				

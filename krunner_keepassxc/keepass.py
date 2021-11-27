@@ -9,8 +9,13 @@ from .dhcrypto import dhcrypto
 
 class KeepassPasswords:
 
-	#BUS_NAME: str = 'org.keepassxc.KeePassXC.MainWindow'
-	BUS_NAME: str = 'org.freedesktop.secrets'
+	BUS_NAMES: List[str] = [
+		'org.keepassxc.KeePassXC.MainWindow',
+		'org.freedesktop.secrets'
+	]
+	BUS_NAME: str = None
+	PASSWORDS_PATH: str = None
+
 
 	bus: dbus._dbus.SessionBus
 	_session: Optional[str]
@@ -32,6 +37,9 @@ class KeepassPasswords:
 
 		self.crypto = dhcrypto()
 
+		self.find_bus_name()
+		self.find_passwords_path()
+
 	@property
 	def session(self) -> Optional[str]:
 		if not self._session:
@@ -47,6 +55,31 @@ class KeepassPasswords:
 			self._session = session_path
 
 		return self._session
+
+	def find_bus_name(self):
+		for bus_name in self.BUS_NAMES:
+			if not self.BUS_NAME:
+				try:
+					secrets = self.bus.get_object(bus_name, '/org/freedesktop/secrets')
+					self.BUS_NAME = bus_name
+				except dbus.exceptions.DBusException as e:
+					pass
+
+	def find_passwords_path(self):
+		if self.BUS_NAME:
+			pathes = [
+				'/org/freedesktop/secrets/collection/passwords',
+				'/org/freedesktop/secrets/collection/Passwords',
+			]
+			for path in pathes:
+				if not self.PASSWORDS_PATH:
+					try:
+						passwords = self.bus.get_object(self.BUS_NAME, path)
+						introspect = passwords.Introspect()
+
+						self.PASSWORDS_PATH = path
+					except dbus.exceptions.DBusException as e:
+						pass
 
 	def is_keepass_installed(self):
 		return subprocess.call(['which', "keepassxc"], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
@@ -84,7 +117,7 @@ class KeepassPasswords:
 		entries = {}
 
 		try:
-			passwords = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets/collection/passwords')
+			passwords = self.bus.get_object(self.BUS_NAME, self.PASSWORDS_PATH)
 			#print(passwords.Introspect())
 			iface = dbus.Interface(passwords, 'org.freedesktop.DBus.Properties')
 			items = iface.GetAll('org.freedesktop.Secret.Collection')

@@ -14,8 +14,6 @@ class KeepassPasswords:
 		'org.freedesktop.secrets'
 	]
 	BUS_NAME: str = ''
-	PASSWORDS_PATH: str = ''
-
 
 	bus: dbus._dbus.SessionBus
 	_session: Optional[str]
@@ -38,7 +36,6 @@ class KeepassPasswords:
 		self.crypto = dhcrypto()
 
 		self.find_bus_name()
-		self.find_passwords_path()
 
 	@property
 	def session(self) -> Optional[str]:
@@ -64,22 +61,6 @@ class KeepassPasswords:
 					self.BUS_NAME = bus_name
 				except dbus.exceptions.DBusException as e:
 					pass
-
-	def find_passwords_path(self):
-		if self.BUS_NAME:
-			pathes = [
-				'/org/freedesktop/secrets/collection/passwords',
-				'/org/freedesktop/secrets/collection/Passwords',
-			]
-			for path in pathes:
-				if not self.PASSWORDS_PATH:
-					try:
-						passwords = self.bus.get_object(self.BUS_NAME, path)
-						introspect = passwords.Introspect()
-
-						self.PASSWORDS_PATH = path
-					except dbus.exceptions.DBusException as e:
-						pass
 
 	def is_keepass_installed(self):
 		return subprocess.call(['which', "keepassxc"], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
@@ -116,24 +97,33 @@ class KeepassPasswords:
 		attributes = {}
 		entries = {}
 
+
 		try:
-			passwords = self.bus.get_object(self.BUS_NAME, self.PASSWORDS_PATH)
-			#print(passwords.Introspect())
-			iface = dbus.Interface(passwords, 'org.freedesktop.DBus.Properties')
-			items = iface.GetAll('org.freedesktop.Secret.Collection')
+			# find collections
+			secrets = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets')
+			iface = dbus.Interface(secrets, 'org.freedesktop.DBus.Properties')
+			collections = iface.GetAll('org.freedesktop.Secret.Service')
+
+			for collection_path in collections.get('Collections'):
 			
-			for item in items.get('Items'):
-				password = self.bus.get_object(self.BUS_NAME, item)
-				iface2 = dbus.Interface(password, 'org.freedesktop.DBus.Properties')
-				items = iface2.GetAll('org.freedesktop.Secret.Item')
-				label = str(items.get('Label'))
-				labels.append(label)
+				# find collection entries
+				passwords = self.bus.get_object(self.BUS_NAME, collection_path)
+				#print(passwords.Introspect())
+				iface = dbus.Interface(passwords, 'org.freedesktop.DBus.Properties')
+				items = iface.GetAll('org.freedesktop.Secret.Collection')
+				
+				for item_path in items.get('Items'):
+					password = self.bus.get_object(self.BUS_NAME, item_path)
+					iface2 = dbus.Interface(password, 'org.freedesktop.DBus.Properties')
+					items = iface2.GetAll('org.freedesktop.Secret.Item')
+					label = str(items.get('Label'))
+					labels.append(label)
 
 
-				attr = items.get('Attributes')
-				attributes[label] = attr
+					attr = items.get('Attributes')
+					attributes[label] = attr
 
-				entries[label] = item
+					entries[label] = item_path
 
 		except dbus.exceptions.DBusException as e:
 			# keepassxc not running	or database closed

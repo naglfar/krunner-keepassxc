@@ -12,7 +12,7 @@ Download the archive, extract and run the install.sh, which should get everythin
 ## more manual ways of getting started ##
 
 ### start using pex or pyz file ###
-Just download [krunner-keepassxc.pex](https://github.com/naglfar/krunner-keepassxc/releases/download/1.4.0/krunner-keepassxc.pex) or [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.4.0/krunner-keepassxc.pyz) and you're good to go!  
+Just download [krunner-keepassxc.pex](https://github.com/naglfar/krunner-keepassxc/releases/download/1.5.1/krunner-keepassxc.pex) or [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.5.1/krunner-keepassxc.pyz) and you're good to go!  
 They are executable files you can just run
 ```
 $ ./krunner-keepassxc.pex	# or do $ python krunner-keepassxc.pex
@@ -22,7 +22,7 @@ $ ./krunner-keepassxc.pyz	# or do $ python krunner-keepassxc.pyz
 ### start using pip ###
 this will pull the files and dependencies (dbus-python, cryptography) into your global python installation
 ```
-$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/1.4.0/krunner_-_keepassxc-1.4.0-py3-none-any.whl
+$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/1.5.1/krunner_-_keepassxc-1.5.1-py3-none-any.whl
 # see if it works:
 $ python3 -m krunner-keepassxc -l  # should list all the password labels in your database
 $ python3 -m krunner-keepassxc run  # will start the dbus service for communicating with krunner

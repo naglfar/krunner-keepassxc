@@ -35,7 +35,7 @@ class KeepassPasswords:
 
 		self.crypto = dhcrypto()
 
-		self.find_bus_name()
+		self.__BUS_NAME = None
 
 	@property
 	def session(self) -> Optional[str]:
@@ -53,14 +53,21 @@ class KeepassPasswords:
 
 		return self._session
 
+	@property
+	def BUS_NAME(self):
+		if not self.__BUS_NAME:
+			self.__BUS_NAME = self.find_bus_name()
+
+		return self.__BUS_NAME
+
 	def find_bus_name(self):
 		for bus_name in self.BUS_NAMES:
-			if not self.BUS_NAME:
-				try:
-					secrets = self.bus.get_object(bus_name, '/org/freedesktop/secrets')
-					self.BUS_NAME = bus_name
-				except dbus.exceptions.DBusException as e:
-					pass
+			try:
+				secrets = self.bus.get_object(bus_name, '/org/freedesktop/secrets')
+				return bus_name
+			except dbus.exceptions.DBusException as e:
+				pass
+		return None
 
 	def is_keepass_installed(self):
 		return subprocess.call(['which', "keepassxc"], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0

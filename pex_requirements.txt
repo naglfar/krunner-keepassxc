@@ -1,6 +1,6 @@
 attrs==19.3.0
 cffi==1.14.0
-cryptography==2.9.2
+cryptography==36.0.0
 dbus-python==1.2.16
 more-itertools==8.3.0
 packaging==20.4

@@ -7,7 +7,8 @@ try:
 	from cryptography.hazmat.primitives import hashes, padding
 	from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 	from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-	from cryptography.utils import int_from_bytes, int_to_bytes
+	# from cryptography.utils import int_from_bytes, int_to_bytes
+	from cryptography.utils import int_to_bytes
 except ImportError:
 	CRYPTOGRAPHY_MISSING = True
 
@@ -40,16 +41,16 @@ class dhcrypto:
 			self.active = False
 		else:
 
-			self.DH_PRIME_1024 = int_from_bytes(self.DH_PRIME_1024_BYTES, 'big')
+			self.DH_PRIME_1024 = int.from_bytes(self.DH_PRIME_1024_BYTES, 'big')
 
-			self.pkey = int_from_bytes(os.urandom(128), 'big')
+			self.pkey = int.from_bytes(os.urandom(128), 'big')
 			self.pubkey = pow(2, self.pkey, self.DH_PRIME_1024)
 
 	def pubkey_as_bytes(self) -> bytes:
 		return int_to_bytes(self.pubkey)
 
 	def set_server_public_key(self, server_public_key: Sequence):
-		common_secret = pow(int_from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
+		common_secret = pow(int.from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
 		common_secret = int_to_bytes(common_secret)
 
 		hkdf = HKDF(

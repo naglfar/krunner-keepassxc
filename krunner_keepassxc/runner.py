@@ -130,7 +130,7 @@ class Runner(dbus.service.Object):
 
 				matches = [
 				#	data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
-					(item, "Copy to clipboard: " + item, "object-unlocked", 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(item) }) for i, item in enumerate(items)
+					(item, item, "object-unlocked", 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(item) }) for i, item in enumerate(items)
 				]
 
 				self.last_match = time.time()

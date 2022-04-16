@@ -6,16 +6,15 @@ Requires xclip or xsel to be installed for copying to clipboard, keepass has to 
 Requires at least Python3.5, running the .pyz file requires python 3.6.
 
 ## quick start from the KDE store ##
-Soon you should be able to install the plugin through the krunner settings, until then you can find it on the [web store](https://store.kde.org/p/1414906/)
+Soon you should be able to install the plugin through the krunner settings, until then you can find it on the [web store](https://store.kde.org/p/1414906/)  
 Download the archive, extract and run the install.sh, which should get everything up and running without doing anything else.
 
 ## more manual ways of getting started ##
 
-### start using pex or pyz file ###
-Just download [krunner-keepassxc.pex](https://github.com/naglfar/krunner-keepassxc/releases/download/1.5.2/krunner-keepassxc.pex) or [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.5.2/krunner-keepassxc.pyz) and you're good to go!  
-They are executable files you can just run
+### start using pyz file ###
+Just download [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.5.2/krunner-keepassxc.pyz) and you're good to go!  
+This is a fully self-contained Python zipapp with included dependencies (see [github.com/linkedin/shiv](https://github.com/linkedin/shiv))
 ```
-$ ./krunner-keepassxc.pex	# or do $ python krunner-keepassxc.pex
 $ ./krunner-keepassxc.pyz	# or do $ python krunner-keepassxc.pyz
 ```
 
@@ -38,15 +37,15 @@ $ poetry run -l # should list all the password labels in your database
 ```
 
 ### installing the krunner plugin  ###
-copy [install/krunner-keepassxc.desktop](install/krunner-keepassxc.desktop) to ~/.local/share/kservices5/  
+copy [install/krunner-keepassxc.desktop](install/krunner-keepassxc.desktop) to ~/.local/share/kservices5/
 after this krunner-keepassxc should already show up in krunner plugins but might require a reboot to actually work
 
 ### running the script in background / on startup ###
 # via autostart
-edit [install/krunner-keepassxc_autostart.desktop](install/krunner-keepassxc_autostart.desktop) and uncomment your scenario,  
+edit [install/krunner-keepassxc_autostart.desktop](install/krunner-keepassxc_autostart.desktop) and uncomment your scenario,
 then copy to ~/.config/autostart/
 # via systemd
-edit [install/krunner-keepassxc.service](install/krunner-keepassxc.service) and uncomment your scenario,  
+edit [install/krunner-keepassxc.service](install/krunner-keepassxc.service) and uncomment your scenario,
 then copy to ~/.config/systemd/user/
 ```
 $ systemctl --user enable krunner-keepassxc && systemctl --user start krunner-keepassxc

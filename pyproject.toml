@@ -23,8 +23,8 @@ rope = "1.0.0"
 bandit = "1.7.1"
 
 [tool.poetry.scripts]
-runner = "krunner_keepassxc.__main__:main"
-cli = "krunner_keepassxc.__main__:cli"
+runner = "krunner_keepassxc.__main__:runner"
+cli = "krunner_keepassxc.__main__:main"
 
 [tool.taskipy.tasks]
 tests = "python -m unittest tests/test_*.py"

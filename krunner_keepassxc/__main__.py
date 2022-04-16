@@ -4,9 +4,9 @@ from krunner_keepassxc.keepass import KeepassPasswords
 from krunner_keepassxc.runner import Runner
 
 # FIXME: just for poetry
-def cli():
+def runner():
 	import sys
-	sys.argv.insert(1, 'cli')
+	sys.argv.insert(1, 'run')
 	main()
 
 def main():

@@ -13,7 +13,6 @@ class KeepassPasswords:
 		'org.keepassxc.KeePassXC.MainWindow',
 		'org.freedesktop.secrets'
 	]
-	BUS_NAME: str = ''
 
 	bus: dbus._dbus.SessionBus
 	_session: Optional[str]

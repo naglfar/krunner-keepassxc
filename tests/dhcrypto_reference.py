@@ -5,7 +5,7 @@ from hashlib import sha256
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.utils import int_from_bytes, int_to_bytes
+from cryptography.utils import int_to_bytes
 
 #crypto from SecretStorage for testing
 class dhcryptoss:
@@ -20,24 +20,21 @@ class dhcryptoss:
 		0x49, 0x28, 0x66, 0x51, 0xEC, 0xE6, 0x53, 0x81, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 	)
 
-	DH_PRIME_1024 = int_from_bytes(DH_PRIME_1024_BYTES, 'big')
+	DH_PRIME_1024 = int.from_bytes(DH_PRIME_1024_BYTES, 'big')
 
 	active = True
 
 	def __init__(self):
-		self.pkey = int_from_bytes(os.urandom(0x80), 'big')
+		self.pkey = int.from_bytes(os.urandom(0x80), 'big')
 		self.pubkey = pow(2, self.pkey, self.DH_PRIME_1024)
 		self.aes_key = b''
-
-	def int_to_bytes(self, number):
-		return number.to_bytes(math.ceil(number.bit_length() / 8), 'big')
 
 	def pubkey_as_list(self):
 		return list(int_to_bytes(self.pubkey))
 
 	def set_server_public_key(self, server_public_key):
-		common_secret = pow(int_from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
-		common_secret = self.int_to_bytes(common_secret)
+		common_secret_int = pow(int.from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
+		common_secret = int_to_bytes(common_secret_int)
 		# Prepend NULL bytes if needed
 		common_secret = b'\x00' * (0x80 - len(common_secret)) + common_secret
 		# HKDF with null salt, empty info and SHA-256 hash

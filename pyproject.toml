@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "krunner-keepassxc"
-version = "1.5.1"
+version = "1.5.2"
 description = ""
 authors = ["naglfar <stefan@mtztech.info>"]
 
@@ -14,7 +14,6 @@ setproctitle = "^1.2.3"
 vext = "0.7.6"
 "vext.gi" = "0.7.4"
 pytest = "7.0.1"
-pex = "2.1.79"
 shiv = "1.0.1"
 radon = "5.1.0"
 taskipy = "1.10.1"
@@ -32,13 +31,6 @@ tests = "python -m unittest tests/test_*.py"
 mypy = "mypy --ignore-missing-imports --check-untyped-defs krunner_keepassxc tests"
 lint = "pylint krunner_keepassxc"
 radon = "radon cc krunner_keepassxc"
-pex = """pex \
-		--disable-cache \
-		--inherit-path \
-		-r pex_requirements.txt \
-		-e krunner_keepassxc \
-		-o dist/krunner-keepassxc.pex \
-		."""
 shiv = """shiv \
 		-p "/usr/bin/env python3" \
 		-e krunner_keepassxc.__main__:main \

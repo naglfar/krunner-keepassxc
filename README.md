@@ -1,3 +1,8 @@
+| :warning: If you're using keepassxc 2.7.0: you'll need to uncheck "Confirm when passwords are retrieved by clients" on the Secret Service Settings page for now. |
+| --- |
+  
+  
+
 # <img src="https://raw.githubusercontent.com/naglfar/krunner-keepassxc/master/logo.svg" width="64" height="64"/> krunner-keepassxc
 
 A small krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.org Secret Service dbus integration.

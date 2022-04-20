@@ -26,14 +26,14 @@ class Runner(dbus.service.Object):
 
 	def __init__(self):
 
-		DBusGMainLoop(set_as_default=True)
+		mainloop = DBusGMainLoop(set_as_default=True)
 
 		sessionbus = dbus.SessionBus()
 		sessionbus.request_name(BUS_NAME, dbus.bus.NAME_FLAG_REPLACE_EXISTING)
 		bus_name = dbus.service.BusName(BUS_NAME, bus=sessionbus)
 		dbus.service.Object.__init__(self, bus_name, OBJ_PATH)
 
-		self.kp = KeepassPasswords()
+		self.kp = KeepassPasswords(mainloop)
 		self.cp = Clipboard()
 		self.last_match = 0
 
@@ -41,7 +41,7 @@ class Runner(dbus.service.Object):
 
 		setproctitle('krunner-keepassxc')
 		setthreadtitle('krunner-keepassxc')
-		
+
 		loop = GLib.MainLoop()
 
 		# clear saved data 15 seconds after last krunner match call
@@ -151,8 +151,8 @@ class Runner(dbus.service.Object):
 				user = self.kp.get_username(matchId)
 				self.copy_to_clipboard(user)
 			else:
-				secret = self.kp.get_secret(matchId)
-				self.copy_to_clipboard(secret)
+				secret = self.kp.get_secret(matchId, lambda secret: self.copy_to_clipboard(secret))
+				# self.copy_to_clipboard(secret)
 
 			# clear all cached data on action
 			self.kp.clear_cache()

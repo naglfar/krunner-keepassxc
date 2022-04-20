@@ -2,8 +2,12 @@
 import time
 import os
 import subprocess
-from typing import Dict, List, Optional
+import random
+from typing import Dict, List, Optional, Callable
 import dbus
+from gi.repository import GLib
+from dbus.mainloop.glib import DBusGMainLoop
+import signal
 
 from .dhcrypto import dhcrypto
 
@@ -21,10 +25,22 @@ class KeepassPasswords:
 	_attributes: Dict[str, Dict]
 	_entries: Dict[str, dbus.ObjectPath]
 
+	mainloop: dbus.mainloop.NativeMainLoop
+	loop: dbus.mainloop
+
 	crypto: dhcrypto
 
-	def __init__(self):
-		self.bus = dbus.SessionBus()
+	def __init__(self, mainloop = None):
+
+		if mainloop:
+			self.mainloop = mainloop
+			self.loop = None
+		else:
+			self.mainloop = DBusGMainLoop(set_as_default=True)
+			self.loop = GLib.MainLoop()
+
+		self.bus = dbus.SessionBus(mainloop=self.mainloop)
+
 		self._session = None
 		self.last_check = None
 
@@ -111,13 +127,13 @@ class KeepassPasswords:
 			collections = iface.GetAll('org.freedesktop.Secret.Service')
 
 			for collection_path in collections.get('Collections'):
-			
+
 				# find collection entries
 				passwords = self.bus.get_object(self.BUS_NAME, collection_path)
 				#print(passwords.Introspect())
 				iface = dbus.Interface(passwords, 'org.freedesktop.DBus.Properties')
 				items = iface.GetAll('org.freedesktop.Secret.Collection')
-				
+
 				for item_path in items.get('Items'):
 					password = self.bus.get_object(self.BUS_NAME, item_path)
 					iface2 = dbus.Interface(password, 'org.freedesktop.DBus.Properties')
@@ -160,14 +176,67 @@ class KeepassPasswords:
 	def get_username(self, label: str) -> str:
 		return self.get_attribute(label, 'UserName')
 
-	def get_secret(self, label: str) -> str:
+	def get_secret(self, label: str, cb: Callable[[str], None] = None) -> str:
 		session = self.session
 
 		path = self.passwords[label]
 		password = self.bus.get_object(self.BUS_NAME, path)
 		iface = dbus.Interface(password, 'org.freedesktop.Secret.Item')
 
-		result = iface.GetSecret(str(session))
+		result = None
+
+		locked = False
+		try:
+			locked = iface.Locked()
+		except dbus.exceptions.DBusException as e:
+			pass
+
+		if locked:
+
+			# FIXME: all of this sucks (callback)
+
+			secrets = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets')
+			iface2 = dbus.Interface(secrets, 'org.freedesktop.Secret.Service')
+			dunno, prompt_path = iface2.Unlock([password])
+			prompt = self.bus.get_object(self.BUS_NAME, prompt_path)
+			iface3 = dbus.Interface(prompt, 'org.freedesktop.Secret.Prompt')
+
+			def handler_function(dismissed: bool, passwordPath: str):
+				nonlocal result
+
+				if not dismissed:
+					result = iface.GetSecret(str(session))
+
+				if self.loop:
+					self.loop.quit()
+				else:
+
+					if not self.crypto.active:
+						secret = bytes(result[2]).decode('utf-8')
+					else:
+						secret = self.crypto.decrypt_message(result)
+
+					cb(secret)
+
+
+			self.bus.add_signal_receiver(handler_function, 'Completed', 'org.freedesktop.Secret.Prompt', 'org.keepassxc.KeePassXC.MainWindow', prompt_path)
+			iface3.Prompt("")
+
+			if self.loop:
+				self.loop.run()
+			else:
+				return
+
+		else:
+
+			try:
+				result = iface.GetSecret(str(session))
+			except dbus.exceptions.DBusException as e:
+				print(e)
+
+		if not result:
+			return ""
+
 		secret = ""
 
 		#result[2] is a list of bytes
@@ -175,5 +244,7 @@ class KeepassPasswords:
 			secret = bytes(result[2]).decode('utf-8')
 		else:
 			secret = self.crypto.decrypt_message(result)
+
+		if cb: cb(secret)
 
 		return secret

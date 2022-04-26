@@ -205,7 +205,7 @@ class KeepassPasswords:
 
 			return secret
 
-		return False
+		return ''
 
 
 	# TODO: find a way around using callbacks for async prompt waiting
@@ -252,7 +252,9 @@ class KeepassPasswords:
 				if self.loop:
 					self.loop.run()
 				else:
-					return
+					return ''
+
+			return ''
 
 		else:
 			return self.get_secret_impl(iface, cb)

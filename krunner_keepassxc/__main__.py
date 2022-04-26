@@ -31,8 +31,8 @@ def main():
 			user = kp.get_username(args.user)
 			print(user or 'Nothing found')
 		elif args.password:
-			secret = kp.get_secret(args.password)
-			print(secret or 'Nothing found')
+			kp.get_secret(args.password, lambda secret: print(secret or 'Nothing found'))
+			#print(secret or 'Nothing found')
 		else:
 			parser.print_help()
 

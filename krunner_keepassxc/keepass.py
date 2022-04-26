@@ -54,6 +54,8 @@ class KeepassPasswords:
 
 	@property
 	def session(self) -> Optional[str]:
+
+		# FIXME: session invalidates when keepassxc closes
 		if not self._session:
 			secrets = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets')
 			iface = dbus.Interface(secrets, 'org.freedesktop.Secret.Service')
@@ -67,6 +69,9 @@ class KeepassPasswords:
 			self._session = session_path
 
 		return self._session
+
+	def clear_session(self):
+		self._session = None
 
 	@property
 	def BUS_NAME(self):
@@ -176,9 +181,35 @@ class KeepassPasswords:
 	def get_username(self, label: str) -> str:
 		return self.get_attribute(label, 'UserName')
 
-	def get_secret(self, label: str, cb: Callable[[str], None] = None) -> str:
-		session = self.session
+	def get_secret_impl(self, iface, cb: Callable[[str], None] = None, recursed = False):
 
+		result = None
+		try:
+			result = iface.GetSecret(str(self.session))
+		except dbus.exceptions.DBusException as e:
+			if e.args[0] == 'org.freedesktop.Secret.Error.NoSession' and not recursed:
+				self.clear_session()
+				return self.get_secret_impl(iface, cb, True)
+			else:
+				print(e)
+
+
+		if result:
+			if not self.crypto.active:
+				secret = bytes(result[2]).decode('utf-8')
+			else:
+				secret = self.crypto.decrypt_message(result)
+
+			if cb:
+				cb(secret)
+
+			return secret
+
+		return False
+
+
+	# TODO: find a way around using callbacks for async prompt waiting
+	def get_secret(self, label: str, cb: Callable[[str], None] = None) -> str:
 		path = self.passwords[label]
 		password = self.bus.get_object(self.BUS_NAME, path)
 		iface = dbus.Interface(password, 'org.freedesktop.Secret.Item')
@@ -193,58 +224,35 @@ class KeepassPasswords:
 
 		if locked:
 
-			# FIXME: all of this sucks (callback)
-
 			secrets = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets')
 			iface2 = dbus.Interface(secrets, 'org.freedesktop.Secret.Service')
-			dunno, prompt_path = iface2.Unlock([password])
+			unlocked, prompt_path = iface2.Unlock([password])
 			prompt = self.bus.get_object(self.BUS_NAME, prompt_path)
-			iface3 = dbus.Interface(prompt, 'org.freedesktop.Secret.Prompt')
 
-			def handler_function(dismissed: bool, passwordPath: str):
-				nonlocal result
+			# nothing left to unlock
+			if prompt_path == '/':
+				return self.get_secret_impl(iface, cb)
 
-				if not dismissed:
-					result = iface.GetSecret(str(session))
+			else:
+				iface3 = dbus.Interface(prompt, 'org.freedesktop.Secret.Prompt')
+
+				def handler_function(dismissed: bool, passwordPath: str):
+					nonlocal result
+
+					if self.loop:
+						self.loop.quit()
+
+					if not dismissed:
+						self.get_secret_impl(iface, cb)
+
+
+				self.bus.add_signal_receiver(handler_function, 'Completed', 'org.freedesktop.Secret.Prompt', 'org.keepassxc.KeePassXC.MainWindow', prompt_path)
+				iface3.Prompt("")
 
 				if self.loop:
-					self.loop.quit()
+					self.loop.run()
 				else:
-
-					if not self.crypto.active:
-						secret = bytes(result[2]).decode('utf-8')
-					else:
-						secret = self.crypto.decrypt_message(result)
-
-					cb(secret)
-
-
-			self.bus.add_signal_receiver(handler_function, 'Completed', 'org.freedesktop.Secret.Prompt', 'org.keepassxc.KeePassXC.MainWindow', prompt_path)
-			iface3.Prompt("")
-
-			if self.loop:
-				self.loop.run()
-			else:
-				return
+					return
 
 		else:
-
-			try:
-				result = iface.GetSecret(str(session))
-			except dbus.exceptions.DBusException as e:
-				print(e)
-
-		if not result:
-			return ""
-
-		secret = ""
-
-		#result[2] is a list of bytes
-		if not self.crypto.active:
-			secret = bytes(result[2]).decode('utf-8')
-		else:
-			secret = self.crypto.decrypt_message(result)
-
-		if cb: cb(secret)
-
-		return secret
+			return self.get_secret_impl(iface, cb)

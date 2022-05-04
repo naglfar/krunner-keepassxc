@@ -26,13 +26,22 @@ def main():
 	else:
 		kp = KeepassPasswords()
 		if args.list:
-			print(kp.labels)
+			print([e['label'] for e in kp.entries])
 		elif args.user:
-			user = kp.get_username(args.user)
-			print(user or 'Nothing found')
+			entries = list(filter(lambda e: e["label"] == args.user, kp.entries))
+			if len(entries) > 0:
+				for entry in entries:
+					user = kp.get_username(entry["path"])
+					print(user)
+			else:
+				print('Nothing found')
 		elif args.password:
-			kp.get_secret(args.password, lambda secret: print(secret or 'Nothing found'))
-			#print(secret or 'Nothing found')
+			entries = list(filter(lambda e: e["label"] == args.password, kp.entries))
+			if len(entries) > 0:
+				for entry in entries:
+					kp.get_secret(entry["path"], lambda secret: print(secret))
+			else:
+				print('Nothing found')
 		else:
 			parser.print_help()
 

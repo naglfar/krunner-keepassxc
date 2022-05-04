@@ -16,7 +16,6 @@ BUS_NAME = "de.naglfar.krunner-keepassxc"
 OBJ_PATH="/krunner"
 IFACE="org.kde.krunner1"
 
-
 class Runner(dbus.service.Object):
 
 	kp: KeepassPasswords
@@ -83,7 +82,7 @@ class Runner(dbus.service.Object):
 	@dbus.service.method(IFACE, out_signature='a(sss)')
 	def Actions(self):
 		# define our secondary action(s)
-		if len(self.kp.labels) == 0:
+		if len(self.kp.entries) == 0:
 			return []
 		else:
 			return [
@@ -92,9 +91,8 @@ class Runner(dbus.service.Object):
 
 	@dbus.service.method(IFACE, in_signature='s', out_signature='a(sssida{sv})')
 	def Match(self, query: str) -> List:
-		
-		matches:List = []
 
+		matches:List = []
 		if len(query) > 2:
 
 			if not self.cp.can_clip:
@@ -105,7 +103,7 @@ class Runner(dbus.service.Object):
 					('', "Neither xsel nor xclip installed", "object-unlocked", 100, 0.1, {})
 				]
 
-			elif len(self.kp.labels) == 0:
+			elif len(self.kp.entries) == 0:
 				if not self.kp.is_keepass_installed():
 					matches = [
 						('', "KeepassXC does not seem to be installed", "object-unlocked", 100, 0.1, {})
@@ -122,15 +120,16 @@ class Runner(dbus.service.Object):
 					self.empty_action = 'open-keepassxc'
 			else:
 				# find entries that contain the query
-				items = [i for i in self.kp.labels if query.lower() in i.lower()]
+				entries = [e for e in self.kp.entries if query.lower() in e["label"].lower()]
 				# sort entries starting with the query on top
-				items.sort(key=lambda item: (not item.startswith(query), item))
+				# [print(e["label"]) for e in entries]
+				entries.sort(key=lambda entry: (not entry["label"].lower().startswith(query.lower()), entry["label"]))
 				# max 5 entries
-				items = items[:5]
+				entries = entries[:5]
 
 				matches = [
 				#	data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
-					(item, item, "object-unlocked", 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(item) }) for i, item in enumerate(items)
+					(entry["path"], entry["label"], "object-unlocked", 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(entry["path"]) }) for i, entry in enumerate(entries)
 				]
 
 				self.last_match = time.time()

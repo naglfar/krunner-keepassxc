@@ -3,13 +3,19 @@ import time
 import os
 import subprocess
 import random
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List, Optional, Callable, TypedDict
 import dbus
 from gi.repository import GLib
 from dbus.mainloop.glib import DBusGMainLoop
 import signal
 
 from .dhcrypto import dhcrypto
+
+Entry = TypedDict('Entry', {
+	'label': str,
+	'path': dbus.ObjectPath,
+	'attributes': Dict[str, str]
+})
 
 class KeepassPasswords:
 
@@ -21,9 +27,7 @@ class KeepassPasswords:
 	bus: dbus._dbus.SessionBus
 	_session: Optional[str]
 	last_check: Optional[float]
-	_labels: List[str]
-	_attributes: Dict[str, Dict]
-	_entries: Dict[str, dbus.ObjectPath]
+	_entries: List[Entry]
 
 	mainloop: dbus.mainloop.NativeMainLoop
 	loop: dbus.mainloop
@@ -44,9 +48,7 @@ class KeepassPasswords:
 		self._session = None
 		self.last_check = None
 
-		self._labels = []
-		self._attributes = {}
-		self._entries = {}
+		self._entries = []
 
 		self.crypto = dhcrypto()
 
@@ -55,7 +57,6 @@ class KeepassPasswords:
 	@property
 	def session(self) -> Optional[str]:
 
-		# FIXME: session invalidates when keepassxc closes
 		if not self._session:
 			secrets = self.bus.get_object(self.BUS_NAME, '/org/freedesktop/secrets')
 			iface = dbus.Interface(secrets, 'org.freedesktop.Secret.Service')
@@ -103,27 +104,13 @@ class KeepassPasswords:
 			self.fetch_data()
 
 	@property
-	def labels(self) -> List[str]:
-		self.update_properties()
-		return self._labels
-
-	@property
-	def attributes(self) -> Dict[str, Dict]:
-		self.update_properties()
-		return self._attributes
-
-	@property
-	def passwords(self) -> Dict[str, dbus.ObjectPath]:
+	def entries(self) -> List[Entry]:
 		self.update_properties()
 		return self._entries
 
-
 	def fetch_data(self):
 
-		labels = []
-		attributes = {}
-		entries = {}
-
+		entries: List[Entry] = []
 
 		try:
 			# find collections
@@ -134,9 +121,9 @@ class KeepassPasswords:
 			for collection_path in collections.get('Collections'):
 
 				# find collection entries
-				passwords = self.bus.get_object(self.BUS_NAME, collection_path)
+				collection = self.bus.get_object(self.BUS_NAME, collection_path)
 				#print(passwords.Introspect())
-				iface = dbus.Interface(passwords, 'org.freedesktop.DBus.Properties')
+				iface = dbus.Interface(collection, 'org.freedesktop.DBus.Properties')
 				items = iface.GetAll('org.freedesktop.Secret.Collection')
 
 				for item_path in items.get('Items'):
@@ -144,42 +131,41 @@ class KeepassPasswords:
 					iface2 = dbus.Interface(password, 'org.freedesktop.DBus.Properties')
 					items = iface2.GetAll('org.freedesktop.Secret.Item')
 					label = str(items.get('Label'))
-					labels.append(label)
-
 
 					attr = items.get('Attributes')
-					attributes[label] = attr
 
-					entries[label] = item_path
+					entries.append({
+						'label': label,
+						'path': item_path,
+						'attributes': attr
+					})
 
 		except dbus.exceptions.DBusException as e:
 			# keepassxc not running	or database closed
 			pass
 
-		self._labels = labels
-		self._attributes = attributes
 		self._entries = entries
 
 	def clear_cache(self):
-		self._labels = []
-		self._attributes = {}
-		self._entries = {}
+		self._entries = []
 
-	def get_attribute(self, label: str, attribute_name: str) -> str:
+	def get_attribute(self, path: dbus.ObjectPath, attribute_name: str) -> str:
 		attribute_value = ""
 		try:
-			attributes = self.attributes[label]
-			attribute_value = attributes[attribute_name]
+			entry = next(filter(lambda e: e["path"] == path, self.entries))
+			if entry:
+				return entry["attributes"][attribute_name]
+
 		except KeyError:
 			pass
 
 		return attribute_value
 
-	def get_url(self, label: str) -> str:
-		return self.get_attribute(label, 'URL')
+	def get_url(self, path: dbus.ObjectPath) -> str:
+		return self.get_attribute(path, 'URL')
 
-	def get_username(self, label: str) -> str:
-		return self.get_attribute(label, 'UserName')
+	def get_username(self, path: dbus.ObjectPath) -> str:
+		return self.get_attribute(path, 'UserName')
 
 	def get_secret_impl(self, iface, cb: Callable[[str], None] = None, recursed = False):
 
@@ -209,13 +195,11 @@ class KeepassPasswords:
 
 
 	# TODO: find a way around using callbacks for async prompt waiting
-	def get_secret(self, label: str, cb: Callable[[str], None] = None) -> str:
-		path = self.passwords[label]
+	def get_secret(self, path: dbus.ObjectPath, cb: Callable[[str], None] = None) -> str:
 		password = self.bus.get_object(self.BUS_NAME, path)
 		iface = dbus.Interface(password, 'org.freedesktop.Secret.Item')
 
 		result = None
-
 		locked = False
 		try:
 			locked = iface.Locked()

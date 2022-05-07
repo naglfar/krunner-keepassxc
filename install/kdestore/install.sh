@@ -28,8 +28,8 @@ then
 		mkdir -p "${unitpath}"
 	fi
 	sed "s|##execstart##|${pyz}|" "krunner-keepassxc.service" > "${unitpath}/krunner-keepassxc.service"
-	
-	systemctl --user enable krunner-keepassxc && systemctl --user start krunner-keepassxc
+
+	systemctl --user enable krunner-keepassxc && systemctl --user restart krunner-keepassxc
 
 else
 	# autostart
@@ -38,6 +38,7 @@ else
 		mkdir -p "${autostartpath}"
 	fi
 	sed "s|##exec##|${pyz}|" "krunner-keepassxc_autostart.desktop" > "${autostartpath}/krunner-keepassxc_autostart.desktop"
+	pkill -f "krunner-keepassxc\.pyz"
 	eval "${pyz}" &>/dev/null & disown;
 fi
 

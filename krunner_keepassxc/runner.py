@@ -31,6 +31,11 @@ class Runner(dbus.service.Object):
 		"icon": "object-unlocked",
 	}
 	config_numbers = [ 'max_entries' ]
+	config_comments = {
+		"trigger": "characters to trigger password lookup, can be empty (default)",
+		"max_entries": "maximum number of entries to list (default: 5)",
+		"icon": "the icon to use, you can find possible values in /usr/share/icons/<your theme>/ (default: object-unlock)",
+	}
 
 	kp: KeepassPasswords
 	cp: Clipboard
@@ -53,11 +58,12 @@ class Runner(dbus.service.Object):
 		self.last_match = 0
 
 	def check_config(self):
-		config = configparser.ConfigParser()
+		config = configparser.ConfigParser(allow_no_value=True)
 		section = config[configparser.DEFAULTSECT]
 		filename = f'{xdg_config_home()}{os.sep}{self.app_name}{os.sep}config'
 		if not os.path.exists(filename):
 			for k, v in self.config.items():
+				section['# ' + self.config_comments[k]] = None
 				section[k] = str(v)
 
 			os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -78,6 +84,7 @@ class Runner(dbus.service.Object):
 			update = False
 			for k, v in self.config.items():
 				if not k in section:
+					section['# ' + self.config_comments[k]] = None
 					section[k] = str(v)
 					update = True
 			if update:
@@ -141,7 +148,7 @@ class Runner(dbus.service.Object):
 	def Match(self, query: str) -> List:
 
 		matches:List = []
-		if len(query) > 2 and query.startswith(self.config['trigger']):
+		if len(query) > 2 and query.startswith(self.config['trigger']+' '):
 
 			query = query[len(self.config['trigger']):].strip()
 

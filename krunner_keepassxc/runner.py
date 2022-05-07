@@ -91,6 +91,8 @@ class Runner(dbus.service.Object):
 				with open(filename, 'w') as file:
 					config.write(file)
 
+		if len(self.config['trigger']) > 0: self.config['trigger'] += ' '
+
 	def start(self):
 
 		setproctitle('self.app_name')
@@ -148,7 +150,7 @@ class Runner(dbus.service.Object):
 	def Match(self, query: str) -> List:
 
 		matches:List = []
-		if len(query) > 2 and query.startswith(self.config['trigger']+' '):
+		if len(query) > 2 and query.startswith(self.config['trigger']):
 
 			query = query[len(self.config['trigger']):].strip()
 

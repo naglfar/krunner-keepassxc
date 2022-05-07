@@ -1,26 +1,26 @@
 [tool.poetry]
 name = "krunner-keepassxc"
-version = "1.6.0"
+version = "1.7.0"
 description = ""
 authors = ["naglfar <stefan@mtztech.info>"]
 
 [tool.poetry.dependencies]
 python = "^3.6,<3.11"
 dbus-python = "^1.2.18"
-cryptography = "^36.0.2"
+cryptography = "^37.0.2"
 setproctitle = "^1.2.3"
 xdg = "^5.1.1"
 
 [tool.poetry.dev-dependencies]
-vext = "0.7.6"
-"vext.gi" = "0.7.4"
+vext = "^0.7.6"
+"vext.gi" = "^0.7.4"
 pytest = "7.0.1"
-shiv = "1.0.1"
-radon = "5.1.0"
-taskipy = "1.10.1"
-mypy = "0.942"
+shiv = "^1.0.1"
+radon = "^5.1.0"
+taskipy = "^1.10.1"
+mypy = "^0.950"
 pylint = "2.12.0"
-rope = "1.0.0"
+rope = "^1.0.0"
 bandit = "1.7.1"
 
 [tool.poetry.scripts]

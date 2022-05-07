@@ -1,20 +1,45 @@
 # <img src="https://raw.githubusercontent.com/naglfar/krunner-keepassxc/master/logo.svg" width="64" height="64"/> krunner-keepassxc
 
-A small krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.org Secret Service dbus integration.
-Basically, type something into krunner and the plugin will suggest matching keepassxc entries to copy.
-Keepass has to be configured for secret service access (in both general and database settings).
-Requires at least Python3.5, running the .pyz file requires python 3.6.
+A krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.org Secret Service dbus integration.
 
-## quick start from the KDE store ##
-Soon you should be able to install the plugin through the krunner settings, until then you can find it on the [web store](https://store.kde.org/p/1414906/)  
-Download the archive, extract and run the install.sh, which should get everything up and running without doing anything else.
+## Usage
+You can install the plugin through the krunner settings dialog or alternatively find it on the [web store](https://store.kde.org/p/1414906/), download the archive, extract and run the install.sh, which should get everything up and running.
 
-## config file ##
+### Requirements:
+- Python 3.6 or higher
+- KeepassXC installed and configured for Freedesktop.org Secret Service access (See below)
+
+### Enable Secret Service in KeepassXC:
+* Open KeepassXC client
+* Go to: Tools > Settings > Secret Service Integration 
+* Check "Enable KeepassXC Freedesktop.org Secret Service integration"
+* for each used database:
+  * Go to: Database > Database Settings > Secret Service integration 
+  * Select "Expose entries under this group"
+  * Select the folder that you wish to make available through Secret Service (Select Root if you want to expose all)
+  * Click OK
+
+### Usage Instructions:
+* Launch KRunner. 
+* Enter a search term from the title of the password entry you wish to obtain credentials for
+* Mouse: can click on the entry you are looking for to copy the password to the clipboard.
+* Mouse: can click on the icon to the right of the entry to copy the username. 
+* Keyboard: navigate to the entry you want by using the arrow keys.
+* Keyboard: Press enter to copy the password to the clipboard
+* Keyboard: Press shift + enter, to copy the username to the clipboard.
+
+### config file ##
 On first start the plugin will create a config file with default values in ~/.config/krunner-keepassxc/config (~/.config being $XDG_CONFIG_HOME) where you can add a few settings:
 - trigger word (default: empty)
 - max number of entries to show (default: 5)
 - icon (default: object-unlock, you can find possible values in /usr/share/icons/<your theme>/)
 
+The config file gets read on startup, which you can trigger manually by running `systemctl restart --user krunner-keepassxc.service`
+
+### Other Information:
+As this is a python application communicating with krunner through D-Bus it needs to be running constantly, for this purpose the install script will place the executable at ~/.local/bin/krunner-keepassxc (you can run this for the CLI) and place a systemd unit file at ~/.config/systemd/user/ to control it. If you're not using systemd a KDE autostart script will be created instead.
+
+  
 ## more manual ways of getting started ##
 
 ### start using pyz file ###

@@ -9,6 +9,7 @@ python = "^3.6,<3.11"
 dbus-python = "^1.2.18"
 cryptography = "^36.0.2"
 setproctitle = "^1.2.3"
+xdg = "^5.1.1"
 
 [tool.poetry.dev-dependencies]
 vext = "0.7.6"

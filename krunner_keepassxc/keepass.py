@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Callable, TypedDict
 import dbus
 from gi.repository import GLib
 from dbus.mainloop.glib import DBusGMainLoop
-import signal
 
 from .dhcrypto import dhcrypto
 

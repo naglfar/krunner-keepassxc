@@ -1,11 +1,15 @@
 #!/bin/env python3
+from multiprocessing.sharedctypes import Value
 import time
 import signal
+import os
+import configparser
 
 from gi.repository import GLib
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 from setproctitle import setproctitle, setthreadtitle
+from xdg import xdg_config_home
 
 from typing import List
 
@@ -17,6 +21,16 @@ OBJ_PATH="/krunner"
 IFACE="org.kde.krunner1"
 
 class Runner(dbus.service.Object):
+
+	app_name = "krunner-keepassxc"
+
+	# config vars
+	config = {
+		"trigger": "",
+		"max_entries": 5,
+		"icon": "object-unlocked",
+	}
+	config_numbers = [ 'max_entries' ]
 
 	kp: KeepassPasswords
 	cp: Clipboard
@@ -32,14 +46,48 @@ class Runner(dbus.service.Object):
 		bus_name = dbus.service.BusName(BUS_NAME, bus=sessionbus)
 		dbus.service.Object.__init__(self, bus_name, OBJ_PATH)
 
+		self.check_config()
+
 		self.kp = KeepassPasswords(mainloop)
 		self.cp = Clipboard()
 		self.last_match = 0
 
+	def check_config(self):
+		config = configparser.ConfigParser()
+		section = config[configparser.DEFAULTSECT]
+		filename = f'{xdg_config_home()}{os.sep}{self.app_name}{os.sep}config'
+		if not os.path.exists(filename):
+			for k, v in self.config.items():
+				section[k] = str(v)
+
+			os.makedirs(os.path.dirname(filename), exist_ok=True)
+			with open(filename, 'w') as file:
+				config.write(file)
+
+		else:
+			config.read(filename)
+			for k, v in section.items():
+				if k in self.config:
+					if k in self.config_numbers:
+						try:
+							v = int(v)
+						except ValueError:
+							v = self.config[k]
+					self.config[k] = v
+
+			update = False
+			for k, v in self.config.items():
+				if not k in section:
+					section[k] = str(v)
+					update = True
+			if update:
+				with open(filename, 'w') as file:
+					config.write(file)
+
 	def start(self):
 
-		setproctitle('krunner-keepassxc')
-		setthreadtitle('krunner-keepassxc')
+		setproctitle('self.app_name')
+		setthreadtitle('self.app_name')
 
 		loop = GLib.MainLoop()
 
@@ -59,7 +107,7 @@ class Runner(dbus.service.Object):
 		# handle sigint
 		def sigint_handler(sig, frame):
 			if sig == signal.SIGINT:
-				print(' Quitting krunner-keepassxc')
+				print(f' Quitting {self.app_name}')
 				loop.quit()
 			else:
 				raise ValueError("Undefined handler for '{}'".format(sig))
@@ -93,43 +141,48 @@ class Runner(dbus.service.Object):
 	def Match(self, query: str) -> List:
 
 		matches:List = []
-		if len(query) > 2:
+		if len(query) > 2 and query.startswith(self.config['trigger']):
+
+			query = query[len(self.config['trigger']):].strip()
 
 			if not self.cp.can_clip:
 				self.cp.check_executables()
 
 			if not self.cp.can_clip:
 				matches = [
-					('', "Neither xsel nor xclip installed", "object-unlocked", 100, 0.1, {})
+					('', "Neither xsel nor xclip installed", self.config['icon'], 100, 0.1, {})
 				]
 
 			elif len(self.kp.entries) == 0:
 				if not self.kp.is_keepass_installed():
 					matches = [
-						('', "KeepassXC does not seem to be installed", "object-unlocked", 100, 0.1, {})
+						('', "KeepassXC does not seem to be installed", self.config['icon'], 100, 0.1, {})
 					]
 				elif not self.kp.BUS_NAME:
 					matches = [
-						('', "DBUS bus name not found", "object-unlocked", 100, 0.1, { })
+						('', "DBUS bus name not found", self.config['icon'], 100, 0.1, { })
 					]
 				else:
 					# no passwords found, show open keepass message
 					matches = [
-						('', "No passwords or database locked", "object-unlocked", 100, 0.1, { 'subtext': 'Open KeepassXC' })
+						('', "No passwords or database locked", self.config['icon'], 100, 0.1, { 'subtext': 'Open KeepassXC' })
 					]
 					self.empty_action = 'open-keepassxc'
 			else:
 				# find entries that contain the query
+				# TODO: better search / fuzzy?
 				entries = [e for e in self.kp.entries if query.lower() in e["label"].lower()]
+
 				# sort entries starting with the query on top
 				# [print(e["label"]) for e in entries]
 				entries.sort(key=lambda entry: (not entry["label"].lower().startswith(query.lower()), entry["label"]))
-				# max 5 entries
-				entries = entries[:5]
+
+				# max entries
+				entries = entries[:self.config['max_entries']]
 
 				matches = [
 				#	data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)
-					(entry["path"], entry["label"], "object-unlocked", 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(entry["path"]) }) for i, entry in enumerate(entries)
+					(entry["path"], entry["label"], self.config['icon'], 100, (1 - (i * 0.1)), { 'subtext': self.kp.get_username(entry["path"]) }) for i, entry in enumerate(entries)
 				]
 
 				self.last_match = time.time()

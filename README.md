@@ -9,6 +9,12 @@ Requires at least Python3.5, running the .pyz file requires python 3.6.
 Soon you should be able to install the plugin through the krunner settings, until then you can find it on the [web store](https://store.kde.org/p/1414906/)  
 Download the archive, extract and run the install.sh, which should get everything up and running without doing anything else.
 
+## config file ##
+On first start the plugin will create a config file with default values in ~/.config/krunner-keepassxc/config (~/.config being $XDG_CONFIG_HOME) where you can add a few settings:
+- trigger word (default: empty)
+- max number of entries to show (default: 5)
+- icon (default: object-unlock, you can find possible values in /usr/share/icons/<your theme>/)
+
 ## more manual ways of getting started ##
 
 ### start using pyz file ###

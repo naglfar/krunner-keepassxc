@@ -26,10 +26,10 @@ You can install the plugin through the krunner settings dialog or alternatively 
 * Mouse: can click on the icon to the right of the entry to copy the username. 
 * Keyboard: navigate to the entry you want by using the arrow keys.
 * Keyboard: Press enter to copy the password to the clipboard
-* Keyboard: Press shift + enter, to copy the username to the clipboard.
+* Keyboard: Press shift + enter to copy the username to the clipboard.
 
 ### config file ##
-On first start the plugin will create a config file with default values in ~/.config/krunner-keepassxc/config (~/.config being $XDG_CONFIG_HOME) where you can add a few settings:
+On first start the plugin will create a config file with default values in `~/.config/krunner-keepassxc/config` (`~/.config` being $XDG_CONFIG_HOME) where you can add a few settings:
 - trigger word (default: empty)
 - max number of entries to show (default: 5)
 - icon (default: object-unlock, you can find possible values in /usr/share/icons/<your theme>/)

@@ -95,8 +95,8 @@ class Runner(dbus.service.Object):
 
 	def start(self):
 
-		setproctitle('self.app_name')
-		setthreadtitle('self.app_name')
+		setproctitle(self.app_name)
+		setthreadtitle(self.app_name)
 
 		loop = GLib.MainLoop()
 

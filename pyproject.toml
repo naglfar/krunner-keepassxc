@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "krunner-keepassxc"
-version = "1.7.0"
+version = "1.7.1"
 description = ""
 authors = ["naglfar <stefan@mtztech.info>"]
 

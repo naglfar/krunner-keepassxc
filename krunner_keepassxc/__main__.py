@@ -15,6 +15,7 @@ def main():
 	subparsers.add_parser('run', help='starts the krunner service')
 	parser.add_argument("-l", "--labels", help="list the entries in your opened database", action="store_true", dest="list")
 	parser.add_argument("-u", "--user", help="get the username for one of your entries by label", dest="user", metavar=("label",))
+	parser.add_argument("-t", "--totp", help="get the TOTP for one of your entries by label", dest="totp", metavar=("label",))
 	parser.add_argument("-p", "--password", help="get the password for one of your entries by label", dest="password", metavar=("label",))
 
 	args = parser.parse_args()
@@ -33,6 +34,14 @@ def main():
 				for entry in entries:
 					user = kp.get_username(entry["path"])
 					print(user)
+			else:
+				print('Nothing found')
+		elif args.totp:
+			entries = list(filter(lambda e: e["label"] == args.totp, kp.entries))
+			if len(entries) > 0:
+				for entry in entries:
+					totp = kp.get_totp(entry["path"])
+					print(totp)
 			else:
 				print('Nothing found')
 		elif args.password:

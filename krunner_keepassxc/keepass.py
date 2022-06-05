@@ -3,19 +3,14 @@ import time
 import os
 import subprocess
 import random
-from typing import Dict, List, Optional, Callable, TypedDict
+from typing import Dict, List, Optional, Callable, cast
 import dbus
 from gi.repository import GLib
 from dbus.mainloop.glib import DBusGMainLoop
 import pyotp
 
 from .dhcrypto import dhcrypto
-
-Entry = TypedDict('Entry', {
-	'label': str,
-	'path': dbus.ObjectPath,
-	'attributes': Dict[str, str]
-})
+from .types import Config, Entry
 
 class KeepassPasswords:
 
@@ -32,7 +27,7 @@ class KeepassPasswords:
 
 	mainloop: dbus.mainloop.NativeMainLoop
 	loop: dbus.mainloop
-	config = {}
+	config: Config
 
 	crypto: dhcrypto
 
@@ -195,7 +190,7 @@ class KeepassPasswords:
 		attr = self.get_attribute(path, 'otp')
 		if attr:
 			try:
-				totp = pyotp.parse_uri(attr).now()
+				totp = cast(pyotp.TOTP, pyotp.parse_uri(attr)).now()
 			except:
 				pass
 

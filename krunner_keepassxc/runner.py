@@ -11,7 +11,8 @@ from dbus.mainloop.glib import DBusGMainLoop
 from setproctitle import setproctitle, setthreadtitle
 from xdg import xdg_config_home
 
-from typing import List
+from typing import List, cast
+from .types import Config
 
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
@@ -25,11 +26,11 @@ class Runner(dbus.service.Object):
 	app_name = "krunner-keepassxc"
 
 	# config vars
-	config = {
+	config: Config = {
 		"trigger": "",
 		"max_entries": 5,
 		"icon": "object-unlocked",
-		"totp_as_extra_entry": True
+		"totp_as_extra_entry": "True"
 	}
 	config_numbers = [ 'max_entries' ]
 	config_comments = {
@@ -65,7 +66,7 @@ class Runner(dbus.service.Object):
 		filename = f'{xdg_config_home()}{os.sep}{self.app_name}{os.sep}config'
 		if not os.path.exists(filename):
 			for k, v in self.config.items():
-				section['# ' + self.config_comments[k]] = None
+				section['# ' + self.config_comments[k]] = None	#type: ignore
 				section[k] = str(v)
 
 			os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -78,15 +79,15 @@ class Runner(dbus.service.Object):
 				if k in self.config:
 					if k in self.config_numbers:
 						try:
-							v = int(v)
+							v = int(cast(int, v))
 						except ValueError:
-							v = self.config[k]
-					self.config[k] = v
+							v = self.config[k]	# type: ignore
+					self.config[k] = v	# type: ignore
 
 			update = False
 			for k, v in self.config.items():
 				if not k in section:
-					section['# ' + self.config_comments[k]] = None
+					section['# ' + self.config_comments[k]] = None	#type: ignore
 					section[k] = str(v)
 					update = True
 			if update:

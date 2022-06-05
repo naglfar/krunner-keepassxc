@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "krunner-keepassxc"
-version = "1.7.1"
+version = "1.8.0"
 description = ""
 authors = ["naglfar <stefan@mtztech.info>"]
 
@@ -10,6 +10,7 @@ dbus-python = "^1.2.18"
 cryptography = "^37.0.2"
 setproctitle = "^1.2.3"
 xdg = "^5.1.1"
+pyotp = "^2.6.0"
 
 [tool.poetry.dev-dependencies]
 vext = "^0.7.6"

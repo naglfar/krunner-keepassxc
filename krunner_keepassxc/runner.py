@@ -29,12 +29,14 @@ class Runner(dbus.service.Object):
 		"trigger": "",
 		"max_entries": 5,
 		"icon": "object-unlocked",
+		"totp_as_extra_entry": True
 	}
 	config_numbers = [ 'max_entries' ]
 	config_comments = {
 		"trigger": "characters to trigger password lookup, can be empty (default)",
 		"max_entries": "maximum number of entries to list (default: 5)",
 		"icon": "the icon to use, you can find possible values in /usr/share/icons/<your theme>/ (default: object-unlock)",
+		"totp_as_extra_entry": "if you have TOTP entries they will show up as extra list entries instead of another action icon (true / false)"
 	}
 
 	kp: KeepassPasswords
@@ -53,7 +55,7 @@ class Runner(dbus.service.Object):
 
 		self.check_config()
 
-		self.kp = KeepassPasswords(mainloop)
+		self.kp = KeepassPasswords(mainloop, self.config)
 		self.cp = Clipboard()
 		self.last_match = 0
 
@@ -138,13 +140,16 @@ class Runner(dbus.service.Object):
 
 	@dbus.service.method(IFACE, out_signature='a(sss)')
 	def Actions(self):
-		# define our secondary action(s)
-		if len(self.kp.entries) == 0:
-			return []
-		else:
-			return [
-				('user', 'copy username', 'username-copy'),
-			]
+		# populate entries to check for otp
+		self.kp.update_properties()
+		actions = [
+			('user', 'copy username', 'username-copy'),
+		]
+		if self.kp.otp and "totp_as_extra_entry" in self.config and self.config["totp_as_extra_entry"].lower() == 'false':
+			actions.append(
+				('totp', 'copy TOTP', 'accept_time_event'),
+			)
+		return actions
 
 	@dbus.service.method(IFACE, in_signature='s', out_signature='a(sssida{sv})')
 	def Match(self, query: str) -> List:
@@ -202,15 +207,25 @@ class Runner(dbus.service.Object):
 	@dbus.service.method(IFACE, in_signature='ss',)
 	def Run(self, matchId: str, actionId: str):
 		# matchId is data from Match, actionId is secondary action or empty for primary
-
 		if len(matchId) == 0:
 			# empty matchId means error of some kind
 			if self.empty_action == 'open-keepassxc':
 				self.kp.open_keepass()
 		else:
+
+			# forcing action for specific entries (i.e. TOTP)
+			split_match = matchId.split(':')
+			if len(split_match) > 1:
+				matchId = split_match[0]
+				actionId = split_match[1]
+
 			if actionId == 'user':
 				user = self.kp.get_username(matchId)
 				self.copy_to_clipboard(user)
+			elif actionId == 'totp':
+				totp = self.kp.get_totp(matchId)
+				if totp:
+					self.copy_to_clipboard(totp)
 			else:
 				secret = self.kp.get_secret(matchId, lambda secret: self.copy_to_clipboard(secret))
 				# self.copy_to_clipboard(secret)

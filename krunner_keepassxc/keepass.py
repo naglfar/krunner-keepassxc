@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Callable, TypedDict
 import dbus
 from gi.repository import GLib
 from dbus.mainloop.glib import DBusGMainLoop
+import pyotp
 
 from .dhcrypto import dhcrypto
 
@@ -27,13 +28,15 @@ class KeepassPasswords:
 	_session: Optional[str]
 	last_check: Optional[float]
 	_entries: List[Entry]
+	_otp: bool = False
 
 	mainloop: dbus.mainloop.NativeMainLoop
 	loop: dbus.mainloop
+	config = {}
 
 	crypto: dhcrypto
 
-	def __init__(self, mainloop = None):
+	def __init__(self, mainloop = None, config = {}):
 
 		if mainloop:
 			self.mainloop = mainloop
@@ -52,6 +55,8 @@ class KeepassPasswords:
 		self.crypto = dhcrypto()
 
 		self.__BUS_NAME = None
+
+		self.config = config
 
 	@property
 	def session(self) -> Optional[str]:
@@ -107,9 +112,14 @@ class KeepassPasswords:
 		self.update_properties()
 		return self._entries
 
+	@property
+	def otp(self) -> bool:
+		return self._otp
+
 	def fetch_data(self):
 
 		entries: List[Entry] = []
+		self._otp = False
 
 		try:
 			# find collections
@@ -139,6 +149,20 @@ class KeepassPasswords:
 						'attributes': attr
 					})
 
+					try:
+						if attr['otp']:
+							self._otp = True
+
+							if "totp_as_extra_entry" in self.config and self.config["totp_as_extra_entry"].lower() != 'false':
+								entries.append({
+									'label': label + ' TOTP',
+									'path': item_path + ':totp',
+									'attributes': attr
+								})
+
+					except KeyError:
+						pass
+
 		except dbus.exceptions.DBusException as e:
 			# keepassxc not running	or database closed
 			pass
@@ -165,6 +189,17 @@ class KeepassPasswords:
 
 	def get_username(self, path: dbus.ObjectPath) -> str:
 		return self.get_attribute(path, 'UserName')
+
+	def get_totp(self, path: dbus.ObjectPath) -> str:
+		totp = ""
+		attr = self.get_attribute(path, 'otp')
+		if attr:
+			try:
+				totp = pyotp.parse_uri(attr).now()
+			except:
+				pass
+
+		return totp
 
 	def get_secret_impl(self, iface, cb: Callable[[str], None] = None, recursed = False):
 

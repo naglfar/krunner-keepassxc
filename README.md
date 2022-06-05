@@ -33,6 +33,7 @@ On first start the plugin will create a config file with default values in `~/.c
 - trigger word (default: empty)
 - max number of entries to show (default: 5)
 - icon (default: object-unlock, you can find possible values in /usr/share/icons/<your theme>/)
+- totp_as_extra_entry (true / false, default: true): if you have TOTP set up in any entries they will show up as separate result entries with an added TOTP to the name, if false you will instead get a second action icon to copy the TOTP. Due to krunner limitations this action has no keyboard shortcut and will show up for all entries, even for those without TOTP configured
 
 The config file gets read on startup, which you can trigger manually by running `systemctl restart --user krunner-keepassxc.service`
 
@@ -43,7 +44,7 @@ As this is a python application communicating with krunner through D-Bus it need
 ## more manual ways of getting started ##
 
 ### start using pyz file ###
-Just download [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.7.1/krunner-keepassxc.pyz) and you're good to go!  
+Just download [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.8.0/krunner-keepassxc.pyz) and you're good to go!  
 This is a fully self-contained Python zipapp with included dependencies (see [github.com/linkedin/shiv](https://github.com/linkedin/shiv))
 ```
 $ ./krunner-keepassxc.pyz	# or do $ python krunner-keepassxc.pyz
@@ -52,7 +53,7 @@ $ ./krunner-keepassxc.pyz	# or do $ python krunner-keepassxc.pyz
 ### start using pip ###
 this will pull the files and dependencies (dbus-python, cryptography) into your global python installation
 ```
-$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/1.7.1/krunner_-_keepassxc-1.7.1-py3-none-any.whl
+$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/1.8.0/krunner_-_keepassxc-1.8.0-py3-none-any.whl
 # see if it works:
 $ python3 -m krunner-keepassxc -l  # should list all the password labels in your database
 $ python3 -m krunner-keepassxc run  # will start the dbus service for communicating with krunner

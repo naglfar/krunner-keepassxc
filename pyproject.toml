@@ -6,23 +6,23 @@ authors = ["naglfar <stefan@mtztech.info>"]
 
 [tool.poetry.dependencies]
 python = "^3.6,<3.11"
-dbus-python = "^1.2.18"
-cryptography = "^37.0.2"
-setproctitle = "^1.2.3"
-xdg = "^5.1.1"
-pyotp = "^2.6.0"
+dbus-python = "^1.2"
+cryptography = "^37.0"
+setproctitle = "^1.2"
+xdg = "^5.1"
+pyotp = "^2.6"
 
 [tool.poetry.dev-dependencies]
-vext = "^0.7.6"
-"vext.gi" = "^0.7.4"
-pytest = "7.0.1"
-shiv = "^1.0.1"
-radon = "^5.1.0"
-taskipy = "^1.10.1"
+vext = "^0.7"
+"vext.gi" = "^0.7"
+pytest = "^7.0"
+shiv = "^1.0"
+radon = "^5.1"
+taskipy = "^1.10"
 mypy = "^0.950"
-pylint = "2.12.0"
-rope = "^1.0.0"
-bandit = "1.7.1"
+pylint = "^2.12"
+rope = "^1.0"
+bandit = "^1.7"
 
 [tool.poetry.scripts]
 runner = "krunner_keepassxc.__main__:runner"

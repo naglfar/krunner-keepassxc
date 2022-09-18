@@ -2,6 +2,8 @@
 
 A krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.org Secret Service dbus integration.
 
+> :warning: with one of the newer versions (^2.7.1) keepassxc will turn off secret service integration until you disable kwallet. Either that or the newer versions of KDE plasma (^5.25) turn kwallet on if it used to be off. Not sure, but if the plugin suddenly stops working this might be the reason.
+
 ## Usage
 You can install the plugin through the krunner settings dialog or alternatively find it on the [web store](https://store.kde.org/p/1414906/), download the archive, extract and run the install.sh, which should get everything up and running.
 

@@ -7,7 +7,7 @@ authors = ["naglfar <stefan@mtztech.info>"]
 [tool.poetry.dependencies]
 python = "^3.6,<3.11"
 dbus-python = "^1.2"
-cryptography = "^37.0"
+cryptography = "^39.0"
 setproctitle = "^1.2"
 xdg = "^5.1"
 pyotp = "^2.6"

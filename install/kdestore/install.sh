@@ -8,14 +8,19 @@ fi
 cp "$pwd/krunner-keepassxc.pyz" "$bin"
 pyz="$bin/krunner-keepassxc.pyz run"
 
-kservices_path=$(kf5-config --path services | awk -F: '{print $1}')
-if [[ -z "${kservices_path}" ]]; then
-	kservices_path="$HOME/.local/share/kservices5/"
+# kservices_path=$(kf5-config --path services | awk -F: '{print $1}')
+# if [[ -z "${kservices_path}" ]]; then
+# 	kservices_path="$HOME/.local/share/kservices5/"
+# fi
+# if [ ! -d "${kservices_path}" ]; then
+# 	mkdir -p "${kservices_path}"
+#fi
+
+dbusplugins_path="$HOME/.local/share/krunner/dbusplugins/"
+if [ ! -d "${dbusplugins_path}" ]; then
+	mkdir -p "${dbusplugins_path}"
 fi
-if [ ! -d "${kservices_path}" ]; then
-	mkdir -p "${kservices_path}"
-fi
-cp krunner-keepassxc.desktop "${kservices_path}"
+cp krunner-keepassxc.desktop "${dbusplugins_path}"
 
 if [ -d "/run/systemd/system" ]
 then

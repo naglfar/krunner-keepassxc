@@ -7,7 +7,7 @@ from .dhcrypto_reference import dhcryptoss
 class Tests(unittest.TestCase):
 
 	def test_version(self):
-		self.assertEqual(__version__, '1.8.2')
+		self.assertEqual(__version__, '1.8.3')
 
 	def test_crypto(self):
 		crypto1 = dhcrypto()

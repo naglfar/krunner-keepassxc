@@ -1,7 +1,7 @@
 # ~/.config/autostart/
 
 [Desktop Entry]
-Version=1.8.2
+Version=1.8.3
 Type=Application
 Name=Runner
 Comment=Autostart entry krunner-keepassxc

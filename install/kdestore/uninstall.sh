@@ -1,13 +1,15 @@
 #!/bin/bash
 pwd=$(pwd)
-kservices_path=$(kf5-config --path services | awk -F: '{print $1}')
+dbusplugins_path="$HOME/.local/share/krunner/dbusplugins"
 
 if [ -d "/run/systemd/system" ]
 then
 	# systemd
-	unitpath=$XDG_DATA_HOME
+	unitpath=$XDG_DATA_HOME	# should be ~/.local/share
 	if [[ -z "${unitpath}" ]]; then
-		unitpath=$HOME/.local/share/systemd/user
+		unitpath="$HOME/.local/share/systemd/user"
+	else
+		unitpath="$unitpath/systemd/user"
 	fi
 	systemctl --user stop krunner-keepassxc && systemctl --user disable krunner-keepassxc
 	rm -f "${unitpath}/krunner-keepassxc.service"
@@ -18,8 +20,9 @@ else
 	rm -f "${autostartpath}/krunner-keepassxc_autostart.desktop"
 fi
 
-rm "${kservices_path}/krunner-keepassxc.desktop"
+
+rm "${dbusplugins_path}/krunner-keepassxc.desktop"
 rm "$HOME/.local/bin/krunner-keepassxc.pyz"
 
-kquitapp5 krunner
-kstart5 --windowclass krunner krunner
+kquitapp krunner
+kstart krunner

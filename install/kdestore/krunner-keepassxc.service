@@ -2,10 +2,15 @@
 
 [Unit]
 Description=krunner-keepassxc python service
+PartOf=graphical-session.target
+After=graphical-session.target
+StartLimitIntervalSec=75
+StartLimitBurst=6
 
 [Service]
-Environment="DISPLAY=:0"
-ExecStart=##execstart##
+Type=exec
+ExecStart=%h/.local/bin/krunner-keepassxc.pyz run
+Restart=always
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target

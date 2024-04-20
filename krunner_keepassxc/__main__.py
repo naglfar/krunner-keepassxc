@@ -1,4 +1,7 @@
 import argparse
+import os
+import sys
+import time
 
 from krunner_keepassxc.keepass import KeepassPasswords
 from krunner_keepassxc.runner import Runner
@@ -10,6 +13,7 @@ def runner():
 	main()
 
 def main():
+
 	parser = argparse.ArgumentParser(prog="krunner-keepassxc", description="krunner plugin for querying KeepassXC, includes a small cli for querying manually.")
 	subparsers = parser.add_subparsers(dest="command")
 	subparsers.add_parser('run', help='starts the krunner service')
@@ -21,6 +25,14 @@ def main():
 	args = parser.parse_args()
 
 	if args.command == "run":
+
+		# on some configurations the services starts before environment variables have been set,
+		# i.e. the user has logged in, even though systemd is supposed to manage this correctly
+		# as a dirty hack we sleep 10 seconds and exit, so that the service gets restarted
+		if not 'DISPLAY' in os.environ:
+			time.sleep(10)
+			sys.exit('environment missing, exiting')
+
 		runner = Runner()
 		runner.start()
 

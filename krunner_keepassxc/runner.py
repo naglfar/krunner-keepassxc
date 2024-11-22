@@ -12,7 +12,7 @@ from setproctitle import setproctitle, setthreadtitle
 from xdg import xdg_config_home
 
 from typing import List, cast
-from .types import Config
+from .types import Config, Entry
 
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
@@ -184,13 +184,24 @@ class Runner(dbus.service.Object):
 					]
 					self.empty_action = 'open-keepassxc'
 			else:
-				# find entries that contain the query
-				# TODO: better search / fuzzy?
-				entries = [e for e in self.kp.entries if query.lower() in e["label"].lower()]
+				# find entries that contain the query, Path attribute contains keepass group name
+				# TODO: maybe search through additional attributes aswell?
+				entries = [e for e in self.kp.entries if any([
+					all(x in e["attributes"]["Path"].lower() for x in query.lower().split(' ')),
+					all(x in e["attributes"]["URL"].lower() for x in query.lower().split(' ')),
+					all(x in e["attributes"]["UserName"].lower() for x in query.lower().split(' ')),
+				])]
 
-				# sort entries starting with the query on top
+				# sort entries where the label starts with the query to the top
+				# sort entries containing the query in the label over path next
+				# everything else comes after
 				# [print(e["label"]) for e in entries]
-				entries.sort(key=lambda entry: (not entry["label"].lower().startswith(query.lower()), entry["label"]))
+				entries.sort(key=lambda entry: (
+						not entry["label"].lower().startswith(query.lower()),
+						not query.lower() in entry["label"].lower(),
+						entry["label"]
+					)
+				)
 
 				# max entries
 				entries = entries[:self.config['max_entries']]

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "krunner-keepassxc"
-version = "1.8.3"
+version = "1.9.0"
 description = ""
 authors = ["naglfar <stefan@mtztech.info>"]
 
@@ -36,7 +36,7 @@ shiv = """shiv \
 		-e krunner_keepassxc.__main__:main \
 		--output-file dist/krunner-keepassxc.pyz \
 		."""
-store = """tar czf dist/krunner-keepassxc-store-1.8.3.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc.pyz"""
+store = """tar czf dist/krunner-keepassxc-store-1.9.0.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc.pyz"""
 
 [build-system]
 requires = ["poetry>=0.12"]

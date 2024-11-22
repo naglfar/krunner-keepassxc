@@ -5,9 +5,9 @@ description = ""
 authors = ["naglfar <stefan@mtztech.info>"]
 
 [tool.poetry.dependencies]
-python = "^3.7.2"
+python = "^3.8"
 dbus-python = "^1.3.2"
-cryptography = "^42.0.5"
+cryptography = "^43.0.3"
 setproctitle = "^1.3.3"
 xdg = "^6.0.0"
 pyotp = "^2.9.0"
@@ -22,7 +22,7 @@ shiv = "^1.0.3"
 radon = "^6.0.1"
 mypy = "^1.3.0"
 taskipy = "^1.11.0"
-pylint = "^2.17.4"
+pylint = "^2.17.7"
 rope = "^1.8.0"
 bandit = "^1.7.5"
 

@@ -40,6 +40,10 @@ def main():
 	else:
 		kp = KeepassPasswords()
 
+		# loop = asyncio.new_event_loop()
+		# # kp = KeepassPasswords()
+		# kp = loop.run_until_complete(KeepassPasswords())
+
 		if args.list:
 			print("\n".join([e["attributes"]["Path"] for e in kp.entries]))
 
@@ -58,7 +62,7 @@ def main():
 				for entry in entries:
 					totp = kp.get_totp(entry["path"])
 					if totp:
-						print(f'{entry['attributes']['Path']}: {totp}')
+						print(f'{entry["attributes"]["Path"]}: {totp}')
 			else:
 				print('Nothing found')
 
@@ -66,7 +70,7 @@ def main():
 			entries = list(filter(lambda e: e["label"] == args.password, kp.entries))
 			if len(entries) > 0:
 				for entry in entries:
-					kp.get_secret(entry["path"], lambda secret: print(f'{entry['attributes']['Path']}: {secret}'))
+					kp.get_secret(entry["path"], lambda secret: print(f'{entry["attributes"]["Path"]}: {secret}'))
 			else:
 				print('Nothing found')
 

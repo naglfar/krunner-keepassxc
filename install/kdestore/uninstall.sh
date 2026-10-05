@@ -24,5 +24,22 @@ fi
 rm "${dbusplugins_path}/krunner-keepassxc.desktop"
 rm "$HOME/.local/bin/krunner-keepassxc.pyz"
 
-kquitapp krunner
-kstart krunner
+
+# restart krunner
+if command -v kquitapp6 >/dev/null 2>&1; then
+	kquitapp6 krunner >/dev/null 2>&1 || pkill -f krunner
+elif command -v kquitapp5 >/dev/null 2>&1; then
+	kquitapp5 krunner >/dev/null 2>&1 || pkill -f krunner
+else
+	pkill -f krunner
+fi
+
+sleep 1
+
+if command -v kstart6 >/dev/null 2>&1; then
+	kstart6 krunner >/dev/null 2>&1
+elif command -v kstart5 >/dev/null 2>&1; then
+	kstart5 krunner >/dev/null 2>&1
+else
+	nohup krunner >/dev/null 2>&1 &
+fi

@@ -1,6 +1,6 @@
 [project]
 name = "krunner-keepassxc"
-version = "1.9.1"
+version = "1.9.2"
 description = ""
 authors = [{ name = "naglfar", email = "stefan@mtztech.info" }]
 requires-python = ">=3.14,<4"
@@ -42,7 +42,7 @@ shiv = """shiv \
 		-e krunner_keepassxc.__main__:main \
 		--output-file dist/krunner-keepassxc.pyz \
 		."""
-store = """tar czf dist/krunner-keepassxc-store-1.9.1.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc.pyz"""
+store = """tar czf dist/krunner-keepassxc-store-1.9.2.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc.pyz"""
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

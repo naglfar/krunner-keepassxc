@@ -8,7 +8,7 @@ A krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.or
 You can install the plugin through the krunner settings dialog or alternatively find it on the [web store](https://store.kde.org/p/1414906/), download the archive, extract and run the install.sh, which should get everything up and running.
 
 ### Requirements:
-- Python 3.6 or higher
+- Python 3.14 or higher (the .pyz release bundles its own python interpreter)
 - KeepassXC installed and configured for Freedesktop.org Secret Service access (See below)
 
 ### Enable Secret Service in KeepassXC:
@@ -46,7 +46,7 @@ As this is a python application communicating with krunner through D-Bus it need
 ## more manual ways of getting started ##
 
 ### start using pyz file ###
-Just download [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.9.0/krunner-keepassxc.pyz) and you're good to go!  
+Just download [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/1.9.1/krunner-keepassxc.pyz) and you're good to go!  
 This is a fully self-contained Python zipapp with included dependencies (see [github.com/linkedin/shiv](https://github.com/linkedin/shiv))
 ```
 $ ./krunner-keepassxc.pyz	# or do $ python krunner-keepassxc.pyz
@@ -55,7 +55,7 @@ $ ./krunner-keepassxc.pyz	# or do $ python krunner-keepassxc.pyz
 ### start using pip ###
 this will pull the files and dependencies (dbus-python, cryptography) into your global python installation
 ```
-$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/1.9.0/krunner_-_keepassxc-1.9.0-py3-none-any.whl
+$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/1.9.1/krunner_-_keepassxc-1.9.1-py3-none-any.whl
 # see if it works:
 $ python3 -m krunner-keepassxc -l  # should list all the password labels in your database
 $ python3 -m krunner-keepassxc run  # will start the dbus service for communicating with krunner

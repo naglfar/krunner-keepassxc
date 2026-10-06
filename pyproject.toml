@@ -34,9 +34,9 @@ default-groups = "all"
 
 [tool.taskipy.tasks]
 tests = "python -m unittest tests/test_*.py"
-mypy = "mypy --ignore-missing-imports --check-untyped-defs krunner_keepassxc tests"
-lint = "pylint krunner_keepassxc"
-radon = "radon cc krunner_keepassxc"
+mypy = "mypy --ignore-missing-imports --check-untyped-defs src/krunner_keepassxc tests"
+lint = "pylint src/krunner_keepassxc"
+radon = "radon cc src/krunner_keepassxc"
 shiv = """shiv \
 		-p "/usr/bin/env python3" \
 		-e krunner_keepassxc.__main__:main \

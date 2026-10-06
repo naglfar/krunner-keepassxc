@@ -3,8 +3,6 @@ from multiprocessing.sharedctypes import Value
 import time
 import signal
 import os
-import configparser
-
 from gi.repository import GLib
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
@@ -14,6 +12,8 @@ from xdg import xdg_config_home
 from typing import List, cast
 from .types import Config, Entry
 
+import configparser
+from .configparser import CommentConfigParser
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
 
@@ -61,7 +61,7 @@ class Runner(dbus.service.Object):
 		self.last_match = 0
 
 	def check_config(self):
-		config = configparser.ConfigParser(allow_no_value=True)
+		config = CommentConfigParser(allow_no_value=True)
 		section = config[configparser.DEFAULTSECT]
 		filename = f'{xdg_config_home()}{os.sep}{self.app_name}{os.sep}config'
 		if not os.path.exists(filename):

@@ -13,19 +13,19 @@ You can install the plugin through the krunner settings dialog or alternatively 
 
 ### Enable Secret Service in KeepassXC:
 * Open KeepassXC client
-* Go to: Tools > Settings > Secret Service Integration 
+* Go to: Tools > Settings > Secret Service Integration
 * Check "Enable KeepassXC Freedesktop.org Secret Service integration"
 * for each used database:
-  * Go to: Database > Database Settings > Secret Service integration 
+  * Go to: Database > Database Settings > Secret Service integration
   * Select "Expose entries under this group"
   * Select the folder that you wish to make available through Secret Service (Select Root if you want to expose all)
   * Click OK
 
 ### Usage Instructions:
-* Launch KRunner. 
+* Launch KRunner.
 * Enter a search term from the title of the password entry you wish to obtain credentials for
 * Mouse: can click on the entry you are looking for to copy the password to the clipboard.
-* Mouse: can click on the icon to the right of the entry to copy the username. 
+* Mouse: can click on the icon to the right of the entry to copy the username.
 * Keyboard: navigate to the entry you want by using the arrow keys.
 * Keyboard: Press enter to copy the password to the clipboard
 * Keyboard: Press shift + enter to copy the username to the clipboard.
@@ -35,14 +35,14 @@ On first start the plugin will create a config file with default values in `~/.c
 - trigger word (default: empty)
 - max number of entries to show (default: 5)
 - icon (default: object-unlock, you can find possible values in /usr/share/icons/<your theme>/)
-- totp_as_extra_entry (true / false, default: true): if you have TOTP set up in any entries they will show up as separate result entries with an added TOTP to the name, if false you will instead get a second action icon to copy the TOTP. Due to krunner limitations this action has no keyboard shortcut and will show up for all entries, even for those without TOTP configured
+- totp_as_extra_entry (true / false, default: true): if you have TOTP set up in any entries they will show up as separate result entries with an added TOTP to the name, if false you will instead get a secondary action icon to copy the TOTP. Though, due to krunner limitations this action has no keyboard shortcut and will show up for all entries, even for those without TOTP configured, thus not being the default.
 
 The config file gets read on startup, which you can trigger manually by running `systemctl restart --user krunner-keepassxc.service`
 
 ### Other Information:
 As this is a python application communicating with krunner through D-Bus it needs to be running constantly, for this purpose the install script will place the executable at ~/.local/bin/krunner-keepassxc (you can run this for the CLI) and place a systemd unit file at ~/.config/systemd/user/ to control it. If you're not using systemd a KDE autostart script will be created instead.
 
-  
+
 ## more manual ways of getting started ##
 
 ### start using built Niutka binary ###
@@ -71,7 +71,7 @@ $ uv run cli -l # should list all the password labels in your database
 ```
 
 ### installing the krunner plugin  ###
-copy [install/krunner-keepassxc.desktop](install/krunner-keepassxc.desktop) to ~/.local/share/kservices5/
+copy [install/krunner-keepassxc.desktop](install/krunner-keepassxc.desktop) to ~/.local/share/krunner/dbusplugins/ (~/.local/share/kservices5/ for plasma5)
 after this krunner-keepassxc should already show up in krunner plugins but might require a reboot to actually work
 
 ### running the script in background / on startup ###

@@ -8,7 +8,7 @@ A krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.or
 You can install the plugin through the krunner settings dialog or alternatively find it on the [web store](https://store.kde.org/p/1414906/), download the archive, extract and run the install.sh, which should get everything up and running.
 
 ### Requirements:
-- Python 3.14 or higher (the .pyz release bundles its own python interpreter)
+- Python 3.14 (probably runs with 3.10+)
 - KeepassXC installed and configured for Freedesktop.org Secret Service access (See below)
 
 ### Enable Secret Service in KeepassXC:
@@ -45,11 +45,11 @@ As this is a python application communicating with krunner through D-Bus it need
   
 ## more manual ways of getting started ##
 
-### start using pyz file ###
-Just download [krunner-keepassxc.pyz](https://github.com/naglfar/krunner-keepassxc/releases/download/2.0.0/krunner-keepassxc.pyz) and you're good to go!  
-This is a fully self-contained Python zipapp with included dependencies (see [github.com/linkedin/shiv](https://github.com/linkedin/shiv))
+### start using built Niutka binary ###
+Just download [krunner-keepassxc](https://github.com/naglfar/krunner-keepassxc/releases/download/2.0.0/krunner-keepassxc) and you're good to go!
+This is a fully self-contained binary with all dependencies (see [github.com/nuitka/nuitka](https://github.com/nuitka/nuitka))
 ```
-$ ./krunner-keepassxc.pyz	# or do $ python krunner-keepassxc.pyz
+$ ./krunner-keepassxc
 ```
 
 ### start using pip ###
@@ -61,13 +61,13 @@ $ python3 -m krunner-keepassxc -l  # should list all the password labels in your
 $ python3 -m krunner-keepassxc run  # will start the dbus service for communicating with krunner
 ```
 
-### using poetry ###
+### using uv ###
 mostly for development
 ```
 $ git clone git@github.com:naglfar/krunner-keepassxc.git
 $ cd krunner-keepassxc
-$ poetry install
-$ poetry run cli -l # should list all the password labels in your database
+$ uv sync
+$ uv run cli -l # should list all the password labels in your database
 ```
 
 ### installing the krunner plugin  ###

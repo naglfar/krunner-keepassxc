@@ -2,7 +2,7 @@ import sys
 import subprocess
 import dbus
 
-from typing import Tuple, Callable
+from typing import Callable
 
 class Clipboard:
 
@@ -52,7 +52,7 @@ class Clipboard:
 
 		return copy_klipper
 
-	def init_xclip_clipboard(self) -> Tuple[Callable,Callable]:
+	def init_xclip_clipboard(self) -> tuple[Callable,Callable]:
 		DEFAULT_SELECTION: str = 'c'
 		PRIMARY_SELECTION: str = 'p'
 
@@ -79,7 +79,7 @@ class Clipboard:
 
 		return copy_xclip, paste_xclip
 
-	def init_xsel_clipboard(self) -> Tuple[Callable,Callable]:
+	def init_xsel_clipboard(self) -> tuple[Callable,Callable]:
 		DEFAULT_SELECTION: str = '-b'
 		PRIMARY_SELECTION: str = '-p'
 

@@ -15,7 +15,7 @@ dependencies = [
 
 [project.scripts]
 runner = "krunner_keepassxc.__main__:runner"
-cli = "krunner_keepassxc.__main__:main"
+cli = "krunner_keepassxc.__main__:cli"
 
 [dependency-groups]
 dev = [

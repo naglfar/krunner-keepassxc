@@ -6,7 +6,7 @@ if [ ! -d "${bin}" ]; then
 	mkdir -p "${bin}"
 fi
 # remove old version if exists
-rm -f "$pwd/krunner-keepassxc.pyz"
+rm -f "$bin/krunner-keepassxc.pyz"
 cp "$pwd/krunner-keepassxc" "$bin"
 exec="$bin/krunner-keepassxc run"
 

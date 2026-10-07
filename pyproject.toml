@@ -1,6 +1,6 @@
 [project]
 name = "krunner-keepassxc"
-version = "1.9.2"
+version = "2.0.0"
 description = ""
 authors = [{ name = "naglfar", email = "stefan@mtztech.info" }]
 requires-python = ">=3.14,<4"
@@ -12,6 +12,7 @@ dependencies = [
     "pyotp>=2.9.0",
     "dbus-fast>=2.24.4",
     "ruff>=0.16.10",
+    "nuitka>=4.2.2",
 ]
 
 [project.scripts]
@@ -43,7 +44,14 @@ shiv = """shiv \
 		-e krunner_keepassxc.__main__:main \
 		--output-file dist/krunner-keepassxc.pyz \
 		."""
-store = """tar czf dist/krunner-keepassxc-store-1.9.2.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc.pyz"""
+nuitka = """cd src && uv run python -m nuitka \
+        --output-dir=../dist \
+        --output-filename="krunner-keepassxc" \
+        --mode=onefile \
+        --python-flag=-m \
+        krunner_keepassxc
+    """
+store = """tar czf dist/krunner-keepassxc-store-2.0.0.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc"""
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

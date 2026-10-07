@@ -9,7 +9,7 @@ StartLimitBurst=6
 
 [Service]
 Type=exec
-ExecStart=%h/.local/bin/krunner-keepassxc.pyz run
+ExecStart=%h/.local/bin/krunner-keepassxc run
 Restart=always
 
 [Install]

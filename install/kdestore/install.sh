@@ -5,8 +5,10 @@ bin="$HOME/.local/bin/"
 if [ ! -d "${bin}" ]; then
 	mkdir -p "${bin}"
 fi
-cp "$pwd/krunner-keepassxc.pyz" "$bin"
-pyz="$bin/krunner-keepassxc.pyz run"
+# remove old version if exists
+rm -f "$pwd/krunner-keepassxc.shiv"
+cp "$pwd/krunner-keepassxc" "$bin"
+exec="$bin/krunner-keepassxc run"
 
 dbusplugins_path="$HOME/.local/share/krunner/dbusplugins/"
 if [ ! -d "${dbusplugins_path}" ]; then
@@ -36,9 +38,9 @@ else
 	if [ ! -d "${autostartpath}" ]; then
 		mkdir -p "${autostartpath}"
 	fi
-	sed "s|##exec##|${pyz}|" "krunner-keepassxc_autostart.desktop" > "${autostartpath}/krunner-keepassxc_autostart.desktop"
-	pkill -f "krunner-keepassxc\.pyz"
-	eval "${pyz}" &>/dev/null & disown;
+	sed "s|##exec##|${exec}|" "krunner-keepassxc_autostart.desktop" > "${autostartpath}/krunner-keepassxc_autostart.desktop"
+	pkill -f "krunner-keepassxc"
+	eval "${exec}" &>/dev/null & disown;
 fi
 
 # restart krunner

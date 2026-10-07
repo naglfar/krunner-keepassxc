@@ -326,12 +326,13 @@ wheels = [
 
 [[package]]
 name = "krunner-keepassxc"
-version = "1.9.2"
+version = "2.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
     { name = "dbus-fast" },
     { name = "dbus-python" },
+    { name = "nuitka" },
     { name = "pyotp" },
     { name = "ruff" },
     { name = "setproctitle" },
@@ -355,6 +356,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=43.0.3" },
     { name = "dbus-fast", specifier = ">=2.24.4" },
     { name = "dbus-python", specifier = ">=1.3.2" },
+    { name = "nuitka", specifier = ">=4.2.2" },
     { name = "pyotp", specifier = ">=2.9.0" },
     { name = "ruff", specifier = ">=0.16.10" },
     { name = "setproctitle", specifier = ">=1.3.3" },
@@ -544,6 +546,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/a2/6e/371856a3fb9d31ca8
 wheels = [
     { url = "https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl", hash = "sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505", size = 4963 },
 ]
+
+[[package]]
+name = "nuitka"
+version = "4.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/75/27/9fef9381e967c333c808d8b087ca2cca713d608647a638d962f34ea22a45/nuitka-4.2.2.tar.gz", hash = "sha256:29c1bfb6f53154e620b38cf6167cbb03f54043f6e08ef7d3f2d5080a95df7e0d", size = 4635975 }
 
 [[package]]
 name = "packaging"

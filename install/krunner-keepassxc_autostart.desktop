@@ -1,14 +1,16 @@
 # ~/.config/autostart/
 
 [Desktop Entry]
-Version=1.9.2
+Version=2.0.0
 Type=Application
 Name=Runner
 Comment=Autostart entry krunner-keepassxc
 Keywords=Runner;Krunner
 Categories=Utilities
-# as pex file
-#Exec=/path/to/krunner_keepassxc.pex run
+# as nuitka built binary
+#Exec=/path/to/krunner_keepassxc run
+# as shiv built pyz archive
+#Exec=/path/to/krunner_keepassxc.pyz run
 # as global package
 #Exec=python3 -m krunner_keepassxc run
 # in a virtual environment

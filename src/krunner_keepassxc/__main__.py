@@ -91,7 +91,10 @@ async def main():
 			sys.exit('environment missing, exiting')
 
 		runner = Runner(config)
-		await runner.run()
+		try:
+			await runner.run()
+		except asyncio.exceptions.CancelledError:
+			print("\nStopping runner.")
 
 	else:
 		kp = await KeepassPasswords(config)
@@ -152,10 +155,7 @@ async def main():
 def runner():
 	import sys
 	sys.argv.insert(1, 'run')
-	try:
-		asyncio.run(main())
-	except KeyboardInterrupt:
-		print("\nStopping runner.")
+	asyncio.run(main())
 
 def cli():
 	asyncio.run(main())

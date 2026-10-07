@@ -15,17 +15,22 @@ then
 	rm -f "${unitpath}/krunner-keepassxc.service"
 else
 	# autostart
+	# old version
 	pkill -f "krunner-keepassxc\.pyz"
+	pkill -f "krunner-keepassxc"
 	autostartpath="~/.local/share/autostart"
 	rm -f "${autostartpath}/krunner-keepassxc_autostart.desktop"
 fi
 
 
-rm "${dbusplugins_path}/krunner-keepassxc.desktop"
-rm "$HOME/.local/bin/krunner-keepassxc.pyz"
+rm -f "${dbusplugins_path}/krunner-keepassxc.desktop"
+rm -f "$HOME/.local/bin/krunner-keepassxc"
+# old version
+rm -f "$HOME/.local/bin/krunner-keepassxc.pyz"
 
 
 # restart krunner
+
 if command -v kquitapp6 >/dev/null 2>&1; then
 	kquitapp6 krunner >/dev/null 2>&1 || pkill -f krunner
 elif command -v kquitapp5 >/dev/null 2>&1; then

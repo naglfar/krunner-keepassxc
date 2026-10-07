@@ -5,8 +5,10 @@ Description=krunner-keepassxc python service
 
 [Service]
 Environment="DISPLAY=:0"
-# as pex file
-#ExecStart=/path/to/krunner_keepassxc.pex run
+# as nuitka built binary
+#ExecStart=/path/to/krunner_keepassxc run
+# as shiv built pyz archive
+#ExecStart=/path/to/krunner_keepassxc.pyz run
 # installed as global package
 #ExecStart=python3 -m krunner_keepassxc run
 # in a virtual environment

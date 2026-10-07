@@ -35,7 +35,7 @@ class CommentConfigParser(configparser.ConfigParser):
 				cleaned_lines.append(line)
 				continue
 
-			if stripped.startswith('#') or stripped.startswith(';'):
+			if stripped.startswith(('#', ';')):
 				comment_key = f"comment_line_{comment_count}"
 				comment_count += 1
 				cleaned_lines.append(f"{comment_key} = {stripped}\n")

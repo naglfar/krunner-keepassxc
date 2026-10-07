@@ -1,4 +1,5 @@
-from typing import Dict, List, TypedDict
+from typing import TypedDict
+
 from dbus import ObjectPath
 
 Config = TypedDict('Config', {
@@ -11,5 +12,5 @@ Config = TypedDict('Config', {
 Entry = TypedDict('Entry', {
 	'label': str,
 	'path': ObjectPath,
-	'attributes': Dict[str, str]
+	'attributes': dict[str, str]
 })

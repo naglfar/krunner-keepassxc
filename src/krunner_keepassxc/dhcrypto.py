@@ -1,5 +1,5 @@
 import os
-from typing import Sequence, Tuple
+from collections.abc import Sequence
 
 CRYPTOGRAPHY_MISSING = False
 try:
@@ -7,6 +7,7 @@ try:
 	from cryptography.hazmat.primitives import hashes, padding
 	from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 	from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
 	# from cryptography.utils import int_from_bytes, int_to_bytes
 	from cryptography.utils import int_to_bytes
 except ImportError:
@@ -62,7 +63,7 @@ class dhcrypto:
 		)
 		self.aes_key = hkdf.derive(common_secret)
 
-	def decrypt_message(self, result: Tuple[str, bytes, bytes]) -> str:
+	def decrypt_message(self, result: tuple[str, bytes, bytes]) -> str:
 		aes_iv = bytes(result[1])
 		encrypted_secret = bytes(result[2])
 
@@ -74,7 +75,7 @@ class dhcrypto:
 		unpadded_data = unpadder.update(padded_data) + unpadder.finalize()
 		return unpadded_data.decode('utf-8')
 
-	def encrypt_message(self, message: str) -> Tuple[str, bytes, bytes]:
+	def encrypt_message(self, message: str) -> tuple[str, bytes, bytes]:
 		aes_iv = bytes(os.urandom(16))
 
 		padder = padding.PKCS7(128).padder()

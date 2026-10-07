@@ -1,5 +1,6 @@
 import configparser
 
+
 # configparser patched to handle comments
 class CommentConfigParser(configparser.ConfigParser):
 	def write(self, fp, space_around_delimiters=True):

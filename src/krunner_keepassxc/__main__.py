@@ -1,19 +1,17 @@
 import argparse
 import asyncio
+import configparser
 import os
 import sys
 import time
-import configparser
 from typing import cast
 
 from xdg import xdg_config_home
 
-from .types import Config
-
-from .configparser import CommentConfigParser
 from krunner_keepassxc.keepass import KeepassPasswords
 from krunner_keepassxc.runner import Runner
 
+from .types import Config
 
 app_name = 'krunner-keepassxc'
 config: Config = {
@@ -154,7 +152,10 @@ async def main():
 def runner():
 	import sys
 	sys.argv.insert(1, 'run')
-	asyncio.run(main())
+	try:
+		asyncio.run(main())
+	except KeyboardInterrupt:
+		print("\nStopping runner.")
 
 def cli():
 	asyncio.run(main())

@@ -1,22 +1,22 @@
 #!/bin/env python3
 import asyncio
-import time
 import os
 import subprocess
-from typing import Dict, List, Optional, Callable, cast
-from cgitb import handler
+import time
+from typing import cast
+
 import dbus
 import pyotp
+from dbus_fast import Variant
+from dbus_fast.aio import MessageBus
 
 from .dhcrypto import dhcrypto
 from .types import Config, Entry
 
-from dbus_fast.aio import MessageBus
-from dbus_fast import Variant
 
 class KeepassPasswords:
 
-	BUS_NAMES: List[str] = [
+	BUS_NAMES: list[str] = [
 		'org.keepassxc.KeePassXC.MainWindow',
 		'org.freedesktop.secrets'
 	]
@@ -24,9 +24,9 @@ class KeepassPasswords:
 	BUS_NAME = 'org.keepassxc.KeePassXC.MainWindow'
 
 	bus: None
-	_session: Optional[str]
-	last_check: Optional[float]
-	_entries: List[Entry]
+	_session: str | None
+	last_check: float | None
+	_entries: list[Entry]
 	_otp: bool = False
 
 	config: Config
@@ -59,7 +59,7 @@ class KeepassPasswords:
 	def __await__(self):
 		return self.async_init().__await__()
 
-	async def get_session(self) -> Optional[str]:
+	async def get_session(self) -> str | None:
 
 		if not self._session:
 			introspection = await self.bus.introspect(self.BUS_NAME, '/org/freedesktop/secrets')
@@ -106,7 +106,7 @@ class KeepassPasswords:
 
 	async def fetch_data(self):
 
-		entries: List[Entry] = []
+		entries: list[Entry] = []
 		self._otp = False
 
 		try:
@@ -158,7 +158,7 @@ class KeepassPasswords:
 									'attributes': attr
 								})
 
-					except KeyError as e:
+					except KeyError:
 						# print(e)
 						pass
 
@@ -195,8 +195,8 @@ class KeepassPasswords:
 		if attr:
 			try:
 				totp = cast(pyotp.TOTP, pyotp.parse_uri(attr)).now()
-			except:
-				pass
+			except Exception as e:
+				print(e)
 
 		return totp
 

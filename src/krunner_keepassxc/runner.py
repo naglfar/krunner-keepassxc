@@ -1,23 +1,13 @@
 import asyncio
-from dbus_fast.service import ServiceInterface, dbus_method
-from dbus_fast.aio import MessageBus
-from dbus_fast.annotations import DBusSignature
-from dbus_fast import Variant
-
-from multiprocessing.sharedctypes import Value
 import time
-import os
-from .configparser import configparser
 
-from setproctitle import setproctitle, setthreadtitle
-from xdg import xdg_config_home
-
-from typing import Annotated, cast
-from .types import Config, Entry
+from dbus_fast import Variant
+from dbus_fast.aio import MessageBus
+from dbus_fast.annotations import Annotated, DBusSignature, DBusStr, DBusVariant
+from dbus_fast.service import ServiceInterface, dbus_method
 
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
-
 
 BUS_NAME = "de.naglfar.krunner-keepassxc"
 OBJ_PATH="/krunner"
@@ -46,13 +36,16 @@ class KeepassRunner(ServiceInterface):
 		if string:
 			try:
 				self.cp.copy(string)
-			except NotImplementedError as e:
+			except NotImplementedError:
 				print('neither xsel nor xclip seem to be installed', flush=True)
 			except Exception as e:
 				print(str(e), flush=True)
 
 	@dbus_method()
-	async def Actions(self) -> 'a(sss)':
+	async def Actions(self) -> Annotated[
+		list[tuple[str, str, str]],
+		DBusSignature("a(sss)") # type: ignore[reportInvalidTypeForm]
+	]:
 
 		# populate entries to check for otp
 		await self.kp.update_properties()
@@ -70,8 +63,11 @@ class KeepassRunner(ServiceInterface):
 		return actions
 
 	@dbus_method()
-	async def Match(self, query: 's') -> 'a(sssida{sv})':
-		print(f"KRunner Query received: {query}")
+	async def Match(self, query: DBusStr) -> Annotated[
+		list[tuple[str, str, str, int, float, dict[str, Variant]]],
+		DBusSignature("a(sssida{sv})") # type: ignore[reportInvalidTypeForm]
+	]:
+		# print(f"KRunner Query received: {query}")
 
 		matches:list = []
 
@@ -144,8 +140,8 @@ class KeepassRunner(ServiceInterface):
 		return matches
 
 	@dbus_method()
-	async def Run(self, match_id: 's', action_id: 's') -> 'v':
-		print([match_id, action_id])
+	async def Run(self, match_id: DBusStr, action_id: DBusStr) -> DBusVariant:
+
 		# matchId is data from Match, actionId is secondary action or empty for primary
 		if len(match_id) == 0:
 			# empty match_id means error of some kind
@@ -157,7 +153,7 @@ class KeepassRunner(ServiceInterface):
 			split_match = match_id.split(':')
 			if len(split_match) > 1:
 				match_id = split_match[0]
-				actionId = split_match[1]
+				action_id = split_match[1]
 
 			if action_id == 'user':
 				user = await self.kp.get_username(match_id)
@@ -187,13 +183,6 @@ class Runner:
 
 		runner = KeepassRunner(self.config, bus)
 		bus.export(OBJ_PATH, runner)
-
 		await bus.request_name(BUS_NAME)
 
-		await asyncio.get_running_loop().create_future()
-
-	def start(self):
-		try:
-			asyncio.run(self.run())
-		except KeyboardInterrupt:
-			print("\nStopping runner.")
+		await asyncio.Event().wait()

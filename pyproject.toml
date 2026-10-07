@@ -11,6 +11,7 @@ dependencies = [
     "xdg>=6.0.0",
     "pyotp>=2.9.0",
     "dbus-fast>=2.24.4",
+    "ruff>=0.16.10",
 ]
 
 [project.scripts]

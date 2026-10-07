@@ -1,8 +1,9 @@
-import sys
 import subprocess
+import sys
+from collections.abc import Callable
+
 import dbus
 
-from typing import Callable
 
 class Clipboard:
 
@@ -20,7 +21,7 @@ class Clipboard:
 			self.klipper = self.bus.get_object('org.kde.klipper', '/klipper')
 			copy = self.init_klipper_clipboard()
 
-		except dbus.exceptions.DBusException as e:
+		except dbus.exceptions.DBusException:
 
 			if self._executable_exists("xclip"):
 				copy, paste = self.init_xclip_clipboard()
@@ -31,9 +32,9 @@ class Clipboard:
 
 		# FIXME: mypy issue #2427
 		if copy:
-			setattr(self, 'copy', copy)
+			self.copy = copy
 		if paste:
-			setattr(self, 'paste', paste)
+			self.paste = paste
 
 	def copy(self, text: str, primary: bool=False):
 		raise NotImplementedError

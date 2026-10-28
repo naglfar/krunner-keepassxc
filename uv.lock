@@ -334,6 +334,7 @@ dependencies = [
     { name = "dbus-python" },
     { name = "nuitka" },
     { name = "pyotp" },
+    { name = "python-libei" },
     { name = "ruff" },
     { name = "setproctitle" },
     { name = "xdg" },
@@ -358,6 +359,7 @@ requires-dist = [
     { name = "dbus-python", specifier = ">=1.3.2" },
     { name = "nuitka", specifier = ">=4.2.2" },
     { name = "pyotp", specifier = ">=2.9.0" },
+    { name = "python-libei", specifier = ">=0.8.0" },
     { name = "ruff", specifier = ">=0.16.10" },
     { name = "setproctitle", specifier = ">=1.3.3" },
     { name = "xdg", specifier = ">=6.0.0" },
@@ -672,6 +674,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536 },
+]
+
+[[package]]
+name = "python-libei"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/09/6fe858658ffe4259e9090bab75606617a6bc77b3257e63af096ac143e79d/python_libei-0.8.0.tar.gz", hash = "sha256:e52d9babcc6318149ff8d632563f21e0d30edea29a0ad982cbb1569e37a302dc", size = 143983 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/56/a7/6a14afa40d96fbe44c71046f9a4c6c7e8d285b374a1ad45ffdefb4a0edeb/python_libei-0.8.0-py3-none-any.whl", hash = "sha256:fa9e8d949406a79083dca9ec9bd821237871fa9579f4d5aa429efdf5b13e29dd", size = 80275 },
 ]
 
 [[package]]

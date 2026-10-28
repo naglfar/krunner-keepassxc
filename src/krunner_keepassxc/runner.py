@@ -7,6 +7,8 @@ from dbus_fast.aio import MessageBus
 from dbus_fast.annotations import Annotated, DBusSignature, DBusStr, DBusVariant
 from dbus_fast.service import ServiceInterface, dbus_method
 
+from .autotype import Autotype, AutotypeError
+from .autotype import is_available as autotype_available
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
 
@@ -35,6 +37,14 @@ class KeepassRunner(ServiceInterface):
 		self.cp = Clipboard()
 		self.last_match = 0
 
+		self.autotype: Autotype | None = None
+		if str(self.config.get('autotype', 'false')).lower() == 'true':
+			if autotype_available():
+				self.autotype = Autotype(self.app_name, delay=int(self.config.get('autotype_delay', 300)) / 1000)
+			else:
+				print('autotype enabled but not available (needs libei on Wayland or libXtst on X11), using the clipboard', flush=True)
+		self._tasks: set[asyncio.Task] = set()
+
 	def _touch(self):
 		if self.on_activity:
 			self.on_activity()
@@ -48,6 +58,28 @@ class KeepassRunner(ServiceInterface):
 			except Exception as e:
 				print(str(e), flush=True)
 
+	def output(self, string: str):
+		"""auto-type the value if enabled, otherwise copy it to the clipboard"""
+		if not string:
+			return
+		if self.autotype is None:
+			self.copy_to_clipboard(string)
+			return
+		# don't block the D-Bus reply, krunner has to close before we can type
+		task = asyncio.create_task(self._autotype(string))
+		self._tasks.add(task)
+		task.add_done_callback(self._tasks.discard)
+
+	async def _autotype(self, string: str):
+		try:
+			await self.autotype.type(string)
+		except (AutotypeError, OSError) as e:
+			print(f'autotype failed, copying to clipboard instead: {e}', flush=True)
+			self.copy_to_clipboard(string)
+		except Exception as e:  # noqa: BLE001 - never lose the value because of a libei/portal issue
+			print(f'autotype failed unexpectedly, copying to clipboard instead: {e!r}', flush=True)
+			self.copy_to_clipboard(string)
+
 	@dbus_method()
 	async def Actions(self) -> Annotated[
 		list[tuple[str, str, str]],
@@ -58,14 +90,15 @@ class KeepassRunner(ServiceInterface):
 		# populate entries to check for otp
 		await self.kp.update_properties()
 
+		verb = 'type' if self.autotype else 'copy'
 		actions = [
-			('user', 'copy username', 'username-copy'),
+			('user', f'{verb} username', 'username-copy'),
 		]
 
 		# if otp entries exist and showing as extra entry is disabled, add an extra TOTP action
 		if self.kp.otp and "totp_as_extra_entry" in self.config and self.config["totp_as_extra_entry"].lower() == 'false':
 			actions.append(
-				('totp', 'copy TOTP', 'accept_time_event'),
+				('totp', f'{verb} TOTP', 'accept_time_event'),
 			)
 
 		return actions
@@ -167,14 +200,14 @@ class KeepassRunner(ServiceInterface):
 
 			if action_id == 'user':
 				user = await self.kp.get_username(match_id)
-				self.copy_to_clipboard(user)
+				self.output(user)
 			elif action_id == 'totp':
 				totp = await self.kp.get_totp(match_id)
 				if totp:
-					self.copy_to_clipboard(totp)
+					self.output(totp)
 			else:
 				secret = await self.kp.get_secret(match_id)
-				self.copy_to_clipboard(secret)
+				self.output(secret)
 
 			# clear last_match to skip needless check_cache
 			self.last_match = 0

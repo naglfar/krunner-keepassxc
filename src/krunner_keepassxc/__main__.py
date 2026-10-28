@@ -17,15 +17,19 @@ config: Config = {
 	"max_entries": 5,
 	"icon": "object-unlocked",
 	"totp_as_extra_entry": "True",
-	"idle_timeout": 0
+	"idle_timeout": 0,
+	"autotype": "False",
+	"autotype_delay": 300
 }
-config_numbers = [ 'max_entries', 'idle_timeout' ]
+config_numbers = [ 'max_entries', 'idle_timeout', 'autotype_delay' ]
 config_comments = {
 	"trigger": "characters to trigger password lookup, can be empty (default)",
 	"max_entries": "maximum number of entries to list (default: 5)",
 	"icon": "the icon to use, you can find possible values in /usr/share/icons/<your theme>/ (default: object-unlock)",
 	"totp_as_extra_entry": "if you have TOTP entries they will show up as extra list entries instead of another action icon (true / false)",
-	"idle_timeout": "seconds without krunner requests after which the service exits, it gets restarted on demand via D-Bus activation (0 = never exit, default)"
+	"idle_timeout": "seconds without krunner requests after which the service exits, it gets restarted on demand via D-Bus activation (0 = never exit, default)",
+	"autotype": "type the values into the focused window instead of copying them to the clipboard, needs libei on Wayland or libXtst on X11 (true / false)",
+	"autotype_delay": "milliseconds to wait before typing so krunner can close and the previous window regains focus (default: 300)"
 }
 
 

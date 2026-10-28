@@ -22,21 +22,26 @@ if command -v busctl >/dev/null 2>&1; then
 	busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig >/dev/null 2>&1
 fi
 
-# restart krunner
-if command -v kquitapp6 >/dev/null 2>&1; then
-	kquitapp6 krunner >/dev/null 2>&1 || pkill -f krunner
-elif command -v kquitapp5 >/dev/null 2>&1; then
-	kquitapp5 krunner >/dev/null 2>&1 || pkill -f krunner
+# make krunner (and the plasmashell search) reload its plugin list, the same
+# signal the "Plasma Search" settings send, no krunner restart required
+if command -v busctl >/dev/null 2>&1 && \
+	busctl --user emit /krunnerrc org.kde.kconfig.notify ConfigChanged 'a{saay}' 1 Plugins 0 >/dev/null 2>&1; then
+	:
 else
-	pkill -f krunner
-fi
-
-sleep 1
-
-if command -v kstart6 >/dev/null 2>&1; then
-	kstart6 krunner >/dev/null 2>&1
-elif command -v kstart5 >/dev/null 2>&1; then
-	kstart5 krunner >/dev/null 2>&1
-else
-	nohup krunner >/dev/null 2>&1 &
+	# fallback: restart krunner
+	if command -v kquitapp6 >/dev/null 2>&1; then
+		kquitapp6 krunner >/dev/null 2>&1 || pkill -x krunner
+	elif command -v kquitapp5 >/dev/null 2>&1; then
+		kquitapp5 krunner >/dev/null 2>&1 || pkill -x krunner
+	else
+		pkill -x krunner
+	fi
+	sleep 1
+	if command -v kstart6 >/dev/null 2>&1; then
+		kstart6 krunner >/dev/null 2>&1
+	elif command -v kstart5 >/dev/null 2>&1; then
+		kstart5 krunner >/dev/null 2>&1
+	else
+		nohup krunner >/dev/null 2>&1 &
+	fi
 fi

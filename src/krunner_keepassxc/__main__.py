@@ -6,6 +6,7 @@ from typing import cast
 
 from xdg import xdg_config_home
 
+from krunner_keepassxc.configparser import CommentConfigParser
 from krunner_keepassxc.keepass import KeepassPasswords
 from krunner_keepassxc.runner import Runner
 
@@ -30,7 +31,7 @@ config_comments = {
 
 
 def read_config():
-	parser = configparser.ConfigParser(allow_no_value=True)
+	parser = CommentConfigParser(allow_no_value=True)
 	section = parser[configparser.DEFAULTSECT]
 	filename = f'{xdg_config_home()}{os.sep}{app_name}{os.sep}config'
 	if not os.path.exists(filename):

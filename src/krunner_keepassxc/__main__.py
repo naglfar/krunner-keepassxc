@@ -1,74 +1,10 @@
 import argparse
 import asyncio
-import configparser
-import os
-from typing import cast
 
-from xdg import xdg_config_home
-
-from krunner_keepassxc.configparser import CommentConfigParser
 from krunner_keepassxc.keepass import KeepassPasswords
 from krunner_keepassxc.runner import Runner
 
-from .types import Config
-
-app_name = 'krunner-keepassxc'
-config: Config = {
-	"trigger": "",
-	"max_entries": 5,
-	"icon": "object-unlocked",
-	"totp_as_extra_entry": "True",
-	"idle_timeout": 0,
-	"autotype": "False",
-	"autotype_delay": 300
-}
-config_numbers = [ 'max_entries', 'idle_timeout', 'autotype_delay' ]
-config_comments = {
-	"trigger": "characters to trigger password lookup, can be empty (default)",
-	"max_entries": "maximum number of entries to list (default: 5)",
-	"icon": "the icon to use, you can find possible values in /usr/share/icons/<your theme>/ (default: object-unlock)",
-	"totp_as_extra_entry": "if you have TOTP entries they will show up as extra list entries instead of another action icon (true / false)",
-	"idle_timeout": "seconds without krunner requests after which the service exits, it gets restarted on demand via D-Bus activation (0 = never exit, default)",
-	"autotype": "type the values into the focused window instead of copying them to the clipboard, needs libei on Wayland or libXtst on X11 (true / false)",
-	"autotype_delay": "milliseconds to wait before typing so krunner can close and the previous window regains focus (default: 300)"
-}
-
-
-def read_config():
-	parser = CommentConfigParser(allow_no_value=True)
-	section = parser[configparser.DEFAULTSECT]
-	filename = f'{xdg_config_home()}{os.sep}{app_name}{os.sep}config'
-	if not os.path.exists(filename):
-		for k, v in config.items():
-			section['# ' + config_comments[k]] = None	#type: ignore
-			section[k] = str(v)
-
-		os.makedirs(os.path.dirname(filename), exist_ok=True)
-		with open(filename, 'w') as file:
-			parser.write(file)
-
-	else:
-		parser.read(filename)
-		for k, v in section.items():
-			if k in config:
-				if k in config_numbers:
-					try:
-						v = int(cast(int, v))
-					except ValueError:
-						v = config[k]	# type: ignore
-				config[k] = v	# type: ignore
-
-		update = False
-		for k, v in config.items():
-			if not k in section:
-				section['# ' + config_comments[k]] = None	#type: ignore
-				section[k] = str(v)
-				update = True
-		if update:
-			with open(filename, 'w') as file:
-				parser.write(file)
-
-	if len(config['trigger']) > 0: config['trigger'] += ' '
+from .config import config, read_config
 
 
 async def main():

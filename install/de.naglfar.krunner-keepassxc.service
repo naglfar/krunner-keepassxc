@@ -1,0 +1,16 @@
+# D-Bus session service activation file
+# copy to ~/.local/share/dbus-1/services/
+# krunner calls the runner via D-Bus, the session bus then starts
+# krunner-keepassxc on demand - no autostart or systemd unit needed.
+# Exec needs an absolute path, uncomment / adjust your scenario:
+
+[D-BUS Service]
+Name=de.naglfar.krunner-keepassxc
+# as nuitka built binary
+#Exec=/path/to/krunner-keepassxc run
+# as shiv built pyz archive
+#Exec=/path/to/krunner-keepassxc.pyz run
+# installed as global package
+#Exec=/usr/bin/python3 -m krunner_keepassxc run
+# in a virtual environment
+#Exec=/path/to/venv/bin/python -m krunner_keepassxc run

@@ -1,7 +1,8 @@
 import asyncio
+import sys
 import time
 
-from dbus_fast import Variant
+from dbus_fast import DBusError, NameFlag, RequestNameReply, Variant
 from dbus_fast.aio import MessageBus
 from dbus_fast.annotations import Annotated, DBusSignature, DBusStr, DBusVariant
 from dbus_fast.service import ServiceInterface, dbus_method
@@ -22,15 +23,21 @@ class KeepassRunner(ServiceInterface):
 	empty_action: str = ""
 	last_match: float
 
-	def __init__(self, config, bus):
+	def __init__(self, config, bus, on_activity=None):
 		super().__init__(IFACE_KRUNNER)
 
 		# self.check_config()
 		self.config = config
+		# callback invoked on every incoming krunner call (used for the idle timeout)
+		self.on_activity = on_activity
 
 		self.kp = KeepassPasswords(self.config, bus)
 		self.cp = Clipboard()
 		self.last_match = 0
+
+	def _touch(self):
+		if self.on_activity:
+			self.on_activity()
 
 	def copy_to_clipboard(self, string: str):
 		if string:
@@ -46,6 +53,7 @@ class KeepassRunner(ServiceInterface):
 		list[tuple[str, str, str]],
 		DBusSignature("a(sss)") # type: ignore[reportInvalidTypeForm]
 	]:
+		self._touch()
 
 		# populate entries to check for otp
 		await self.kp.update_properties()
@@ -68,6 +76,7 @@ class KeepassRunner(ServiceInterface):
 		DBusSignature("a(sssida{sv})") # type: ignore[reportInvalidTypeForm]
 	]:
 		# print(f"KRunner Query received: {query}")
+		self._touch()
 
 		matches:list = []
 
@@ -141,6 +150,7 @@ class KeepassRunner(ServiceInterface):
 
 	@dbus_method()
 	async def Run(self, match_id: DBusStr, action_id: DBusStr) -> DBusVariant:
+		self._touch()
 
 		# matchId is data from Match, actionId is secondary action or empty for primary
 		if len(match_id) == 0:
@@ -175,14 +185,66 @@ class KeepassRunner(ServiceInterface):
 		return Variant('y', 0)
 
 class Runner:
+	"""
+	D-Bus service for krunner.
+
+	The process is meant to be started on demand by the D-Bus daemon (see the
+	de.naglfar.krunner-keepassxc.service activation file) as soon as krunner
+	calls the runner for the first time. If ``idle_timeout`` (seconds) is set
+	to a value > 0 the process releases its bus name and exits after that time
+	without any krunner request; the next request simply activates it again.
+	"""
+
 	def __init__(self, config):
 		self.config = config
+		self._idle_handle: asyncio.TimerHandle | None = None
+		self._stop: asyncio.Event | None = None
+
+	def _idle_timeout(self) -> int:
+		try:
+			return max(0, int(self.config.get('idle_timeout', 0)))
+		except (TypeError, ValueError):
+			return 0
+
+	def _reset_idle_timer(self):
+		timeout = self._idle_timeout()
+		if timeout <= 0 or self._stop is None:
+			return
+		if self._idle_handle:
+			self._idle_handle.cancel()
+		self._idle_handle = asyncio.get_running_loop().call_later(timeout, self._stop.set)
 
 	async def run(self):
 		bus = await MessageBus().connect()
 
-		runner = KeepassRunner(self.config, bus)
+		runner = KeepassRunner(self.config, bus, on_activity=self._reset_idle_timer)
 		bus.export(OBJ_PATH, runner)
-		await bus.request_name(BUS_NAME)
 
-		await asyncio.Event().wait()
+		reply = await bus.request_name(BUS_NAME, NameFlag.DO_NOT_QUEUE)
+		if reply not in (RequestNameReply.PRIMARY_OWNER, RequestNameReply.ALREADY_OWNER):
+			bus.disconnect()
+			sys.exit(f'{BUS_NAME} is already owned by another process, exiting')
+
+		self._stop = asyncio.Event()
+		self._reset_idle_timer()
+
+		stop_task = asyncio.create_task(self._stop.wait())
+		disconnect_task = asyncio.create_task(bus.wait_for_disconnect())
+		try:
+			await asyncio.wait({stop_task, disconnect_task}, return_when=asyncio.FIRST_COMPLETED)
+		finally:
+			for task in (stop_task, disconnect_task):
+				task.cancel()
+			if self._idle_handle:
+				self._idle_handle.cancel()
+
+		if disconnect_task.done() and not disconnect_task.cancelled() and disconnect_task.exception():
+			print(f'D-Bus connection lost: {disconnect_task.exception()}', file=sys.stderr, flush=True)
+
+		if bus.connected:
+			# release the name first so the next krunner call triggers a fresh activation
+			try:
+				await bus.release_name(BUS_NAME)
+			except DBusError as e:
+				print(f'could not release {BUS_NAME}: {e}', file=sys.stderr, flush=True)
+			bus.disconnect()

@@ -6,7 +6,8 @@ Config = TypedDict('Config', {
 	"trigger": str,
 	"max_entries": int,
 	"icon": str,
-	"totp_as_extra_entry": str
+	"totp_as_extra_entry": str,
+	"idle_timeout": int
 })
 
 Entry = TypedDict('Entry', {

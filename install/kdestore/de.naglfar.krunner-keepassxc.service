@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=de.naglfar.krunner-keepassxc
+Exec=##exec##

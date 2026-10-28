@@ -2,8 +2,6 @@ import argparse
 import asyncio
 import configparser
 import os
-import sys
-import time
 from typing import cast
 
 from xdg import xdg_config_home
@@ -18,14 +16,16 @@ config: Config = {
 	"trigger": "",
 	"max_entries": 5,
 	"icon": "object-unlocked",
-	"totp_as_extra_entry": "True"
+	"totp_as_extra_entry": "True",
+	"idle_timeout": 0
 }
-config_numbers = [ 'max_entries' ]
+config_numbers = [ 'max_entries', 'idle_timeout' ]
 config_comments = {
 	"trigger": "characters to trigger password lookup, can be empty (default)",
 	"max_entries": "maximum number of entries to list (default: 5)",
 	"icon": "the icon to use, you can find possible values in /usr/share/icons/<your theme>/ (default: object-unlock)",
-	"totp_as_extra_entry": "if you have TOTP entries they will show up as extra list entries instead of another action icon (true / false)"
+	"totp_as_extra_entry": "if you have TOTP entries they will show up as extra list entries instead of another action icon (true / false)",
+	"idle_timeout": "seconds without krunner requests after which the service exits, it gets restarted on demand via D-Bus activation (0 = never exit, default)"
 }
 
 
@@ -83,13 +83,9 @@ async def main():
 
 	if args.command == "run":
 
-		# on some configurations the services starts before environment variables have been set,
-		# i.e. the user has logged in, even though systemd is supposed to manage this correctly
-		# as a dirty hack we sleep 10 seconds and exit, so that the service gets restarted
-		if not 'DISPLAY' in os.environ:
-			time.sleep(10)
-			sys.exit('environment missing, exiting')
-
+		# the service is started on demand by the D-Bus daemon (see
+		# install/de.naglfar.krunner-keepassxc.service), so it inherits the
+		# session's activation environment and no startup workarounds are needed
 		runner = Runner(config)
 		try:
 			await runner.run()

@@ -36,11 +36,12 @@ On first start the plugin will create a config file with default values in `~/.c
 - max number of entries to show (default: 5)
 - icon (default: object-unlock, you can find possible values in /usr/share/icons/<your theme>/)
 - totp_as_extra_entry (true / false, default: true): if you have TOTP set up in any entries they will show up as separate result entries with an added TOTP to the name, if false you will instead get a secondary action icon to copy the TOTP. Though, due to krunner limitations this action has no keyboard shortcut and will show up for all entries, even for those without TOTP configured, thus not being the default.
+- idle_timeout (seconds, default: 0): exit the service after this many seconds without a krunner request, it gets started again automatically on the next request. 0 keeps it running once started.
 
-The config file gets read on startup, which you can trigger manually by running `systemctl restart --user krunner-keepassxc.service`
+The config file gets read on startup. To apply changes just stop the running service with `pkill -f "krunner-keepassxc run"`, it will be started again with the new config on the next krunner query.
 
 ### Other Information:
-As this is a python application communicating with krunner through D-Bus it needs to be running constantly, for this purpose the install script will place the executable at ~/.local/bin/krunner-keepassxc (you can run this for the CLI) and place a systemd unit file at ~/.config/systemd/user/ to control it. If you're not using systemd a KDE autostart script will be created instead.
+This is a python application communicating with krunner through D-Bus. It is started on demand by the D-Bus session bus (D-Bus activation) the first time krunner queries it, so no autostart entry or systemd unit is required. The install script places the executable at ~/.local/bin/krunner-keepassxc (you can run this for the CLI) and a D-Bus service file at ~/.local/share/dbus-1/services/de.naglfar.krunner-keepassxc.service. Older installations using a systemd user unit or an autostart entry are cleaned up by the install script.
 
 
 ## more manual ways of getting started ##
@@ -74,13 +75,13 @@ $ uv run cli -l # should list all the password labels in your database
 copy [install/krunner-keepassxc.desktop](install/krunner-keepassxc.desktop) to ~/.local/share/krunner/dbusplugins/ (~/.local/share/kservices5/ for plasma5)
 after this krunner-keepassxc should already show up in krunner plugins but might require a reboot to actually work
 
-### running the script in background / on startup ###
-# via autostart
-edit [install/krunner-keepassxc_autostart.desktop](install/krunner-keepassxc_autostart.desktop) and uncomment your scenario,
-then copy to ~/.config/autostart/
-# via systemd
-edit [install/krunner-keepassxc.service](install/krunner-keepassxc.service) and uncomment your scenario,
-then copy to ~/.config/systemd/user/
+### starting the service on demand (D-Bus activation) ###
+edit [install/de.naglfar.krunner-keepassxc.service](install/de.naglfar.krunner-keepassxc.service) and uncomment your scenario (`Exec` needs an absolute path),
+then copy to ~/.local/share/dbus-1/services/
 ```
-$ systemctl --user enable krunner-keepassxc && systemctl --user start krunner-keepassxc
+$ mkdir -p ~/.local/share/dbus-1/services
+$ cp install/de.naglfar.krunner-keepassxc.service ~/.local/share/dbus-1/services/
+# let the session bus pick up the new file (usually happens automatically)
+$ busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig
 ```
+The session bus will now start krunner-keepassxc as soon as krunner sends its first query.

@@ -1,50 +1,47 @@
 #!/bin/bash
-pwd=$(pwd)
-dbusplugins_path="$HOME/.local/share/krunner/dbusplugins"
+data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-if [ -d "/run/systemd/system" ]
-then
-	# systemd
-	unitpath=$XDG_DATA_HOME	# should be ~/.local/share
-	if [[ -z "${unitpath}" ]]; then
-		unitpath="$HOME/.local/share/systemd/user"
-	else
-		unitpath="$unitpath/systemd/user"
-	fi
-	systemctl --user stop krunner-keepassxc && systemctl --user disable krunner-keepassxc
-	rm -f "${unitpath}/krunner-keepassxc.service"
-else
-	# autostart
-	# old version
-	pkill -f "krunner-keepassxc\.pyz"
-	pkill -f "krunner-keepassxc"
-	autostartpath="~/.local/share/autostart"
-	rm -f "${autostartpath}/krunner-keepassxc_autostart.desktop"
-fi
+# stop a running instance
+pkill -f "krunner-keepassxc(\.pyz)? run"
 
-
-rm -f "${dbusplugins_path}/krunner-keepassxc.desktop"
+rm -f "$data_home/dbus-1/services/de.naglfar.krunner-keepassxc.service"
+rm -f "$data_home/krunner/dbusplugins/krunner-keepassxc.desktop"
 rm -f "$HOME/.local/bin/krunner-keepassxc"
-# old version
+# old versions
 rm -f "$HOME/.local/bin/krunner-keepassxc.pyz"
+if command -v systemctl >/dev/null 2>&1 && systemctl --user cat krunner-keepassxc.service >/dev/null 2>&1; then
+	systemctl --user disable --now krunner-keepassxc.service >/dev/null 2>&1
+fi
+rm -f "$data_home/systemd/user/krunner-keepassxc.service" \
+	"$HOME/.config/systemd/user/krunner-keepassxc.service" \
+	"$HOME/.config/autostart/krunner-keepassxc_autostart.desktop" \
+	"$data_home/autostart/krunner-keepassxc_autostart.desktop"
+command -v systemctl >/dev/null 2>&1 && systemctl --user daemon-reload >/dev/null 2>&1
 
-
-# restart krunner
-
-if command -v kquitapp6 >/dev/null 2>&1; then
-	kquitapp6 krunner >/dev/null 2>&1 || pkill -f krunner
-elif command -v kquitapp5 >/dev/null 2>&1; then
-	kquitapp5 krunner >/dev/null 2>&1 || pkill -f krunner
-else
-	pkill -f krunner
+if command -v busctl >/dev/null 2>&1; then
+	busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig >/dev/null 2>&1
 fi
 
-sleep 1
-
-if command -v kstart6 >/dev/null 2>&1; then
-	kstart6 krunner >/dev/null 2>&1
-elif command -v kstart5 >/dev/null 2>&1; then
-	kstart5 krunner >/dev/null 2>&1
+# make krunner (and the plasmashell search) reload its plugin list, the same
+# signal the "Plasma Search" settings send, no krunner restart required
+if command -v busctl >/dev/null 2>&1 && \
+	busctl --user emit /krunnerrc org.kde.kconfig.notify ConfigChanged 'a{saay}' 1 Plugins 0 >/dev/null 2>&1; then
+	:
 else
-	nohup krunner >/dev/null 2>&1 &
+	# fallback: restart krunner
+	if command -v kquitapp6 >/dev/null 2>&1; then
+		kquitapp6 krunner >/dev/null 2>&1 || pkill -x krunner
+	elif command -v kquitapp5 >/dev/null 2>&1; then
+		kquitapp5 krunner >/dev/null 2>&1 || pkill -x krunner
+	else
+		pkill -x krunner
+	fi
+	sleep 1
+	if command -v kstart6 >/dev/null 2>&1; then
+		kstart6 krunner >/dev/null 2>&1
+	elif command -v kstart5 >/dev/null 2>&1; then
+		kstart5 krunner >/dev/null 2>&1
+	else
+		nohup krunner >/dev/null 2>&1 &
+	fi
 fi

@@ -13,7 +13,9 @@ async def main():
 
 	parser = argparse.ArgumentParser(prog="krunner-keepassxc", description="krunner plugin for querying KeepassXC, includes a small cli for querying manually.")
 	subparsers = parser.add_subparsers(dest="command")
-	subparsers.add_parser('run', help='starts the krunner service')
+	run_parser = subparsers.add_parser('run', help='starts the krunner service')
+	run_parser.add_argument("--idle-timeout", type=int, dest="idle_timeout", metavar="SECONDS",
+		help="overrides idle_timeout from the config file, 0 keeps the service running (useful for development)")
 	parser.add_argument("-l", "--list", help="list the entries in your opened databases", action="store_true", dest="list")
 	parser.add_argument("-u", "--user", help="get the username for entries looked up by label", dest="user", metavar=("label",))
 	parser.add_argument("-t", "--totp", help="get the TOTP for entries looked up by label", dest="totp", metavar=("label",))
@@ -27,6 +29,8 @@ async def main():
 		# the service is started on demand by the D-Bus daemon (see
 		# install/de.naglfar.krunner-keepassxc.service), so it inherits the
 		# session's activation environment and no startup workarounds are needed
+		if args.idle_timeout is not None:
+			config['idle_timeout'] = args.idle_timeout
 		runner = Runner(config)
 		try:
 			await runner.run()

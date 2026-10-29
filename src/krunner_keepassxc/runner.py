@@ -47,6 +47,11 @@ class KeepassRunner(ServiceInterface):
 		# heading of the result group in krunner, overrides the Name of the .desktop file
 		self.category = 'KeePassXC: auto-type' if self.autotype else 'KeePassXC: copy to clipboard'
 
+	@property
+	def busy(self) -> bool:
+		"""background work (auto-type) still running"""
+		return bool(self._tasks)
+
 	def _touch(self):
 		if self.on_activity:
 			self.on_activity()
@@ -228,13 +233,15 @@ class Runner:
 	de.naglfar.krunner-keepassxc.service activation file) as soon as krunner
 	calls the runner for the first time. If ``idle_timeout`` (seconds) is set
 	to a value > 0 the process releases its bus name and exits after that time
-	without any krunner request; the next request simply activates it again.
+	without any krunner request (and no auto-type still running); the next
+	request simply activates it again. ``run --idle-timeout 0`` keeps it running.
 	"""
 
 	def __init__(self, config):
 		self.config = config
 		self._idle_handle: asyncio.TimerHandle | None = None
 		self._stop: asyncio.Event | None = None
+		self._runner: KeepassRunner | None = None
 
 	def _idle_timeout(self) -> int:
 		try:
@@ -248,12 +255,21 @@ class Runner:
 			return
 		if self._idle_handle:
 			self._idle_handle.cancel()
-		self._idle_handle = asyncio.get_running_loop().call_later(timeout, self._stop.set)
+		self._idle_handle = asyncio.get_running_loop().call_later(timeout, self._on_idle)
+
+	def _on_idle(self):
+		if self._runner is not None and self._runner.busy:
+			# e.g. auto-type waiting for the portal's consent dialog, check again later
+			self._idle_handle = asyncio.get_running_loop().call_later(5, self._on_idle)
+			return
+		if self._stop is not None:
+			self._stop.set()
 
 	async def run(self):
 		bus = await MessageBus().connect()
 
 		runner = KeepassRunner(self.config, bus, on_activity=self._reset_idle_timer)
+		self._runner = runner
 		bus.export(OBJ_PATH, runner)
 
 		reply = await bus.request_name(BUS_NAME, NameFlag.DO_NOT_QUEUE)

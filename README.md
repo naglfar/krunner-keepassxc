@@ -38,7 +38,7 @@ On first start the plugin will create a config file with default values in `~/.c
 - totp_as_extra_entry (true / false, default: true): if you have TOTP set up in any entries they will show up as separate result entries with an added TOTP to the name, if false you will instead get a secondary action icon to copy the TOTP. Though, due to krunner limitations this action has no keyboard shortcut and will show up for all entries, even for those without TOTP configured, thus not being the default.
 - autotype (true / false, default: false): type the password / username / TOTP into the focused window instead of copying it to the clipboard, see below
 - autotype_delay (milliseconds, default: 300): time to wait before typing, so krunner can close and the previous window gets the focus back
-- idle_timeout (seconds, default: 0): exit the service after this many seconds without a krunner request, it gets started again automatically on the next request. 0 keeps it running once started.
+- idle_timeout (seconds, default: 600): exit the service after this many seconds without a krunner request, it gets started again automatically on the next request. 0 keeps it running once started. For development you can override it on the command line, e.g. `uv run runner --idle-timeout 0`.
 
 The config file gets read on startup. To apply changes just stop the running service with `pkill -f "krunner-keepassxc run"`, it will be started again with the new config on the next krunner query.
 

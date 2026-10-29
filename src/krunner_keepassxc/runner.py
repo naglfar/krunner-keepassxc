@@ -44,12 +44,13 @@ class KeepassRunner(ServiceInterface):
 			else:
 				print('autotype enabled but not available (needs libei on Wayland or libXtst on X11), using the clipboard', flush=True)
 		self._tasks: set[asyncio.Task] = set()
+		self._clear_task: asyncio.Task | None = None
 		# heading of the result group in krunner, overrides the Name of the .desktop file
 		self.category = 'KeePassXC: auto-type' if self.autotype else 'KeePassXC: copy to clipboard'
 
 	@property
 	def busy(self) -> bool:
-		"""background work (auto-type) still running"""
+		"""background work still pending (auto-type, clearing the clipboard)"""
 		return bool(self._tasks)
 
 	def _touch(self):
@@ -62,8 +63,35 @@ class KeepassRunner(ServiceInterface):
 				self.cp.copy(string)
 			except NotImplementedError:
 				print('neither xsel nor xclip seem to be installed', flush=True)
+				return
 			except Exception as e:
 				print(str(e), flush=True)
+				return
+			self._schedule_clipboard_clear()
+
+	def _schedule_clipboard_clear(self):
+		try:
+			delay = int(self.config.get('clipboard_clear_delay', 10))
+		except (TypeError, ValueError):
+			delay = 10
+		if delay <= 0:
+			return
+		# the delay always counts from the latest copy
+		if self._clear_task is not None:
+			self._clear_task.cancel()
+		# kept in _tasks, so the idle timeout doesn't end the service before clearing
+		task = asyncio.create_task(self._clear_clipboard_later(delay))
+		self._clear_task = task
+		self._tasks.add(task)
+		task.add_done_callback(self._tasks.discard)
+
+	async def _clear_clipboard_later(self, delay: int):
+		await asyncio.sleep(delay)
+		self._clear_task = None
+		try:
+			self.cp.clear()
+		except Exception as e:  # noqa: BLE001 - only log, there is nobody to report to
+			print(f'could not clear the clipboard: {e!r}', flush=True)
 
 	def output(self, string: str):
 		"""auto-type the value if enabled, otherwise copy it to the clipboard"""

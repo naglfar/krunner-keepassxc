@@ -9,7 +9,8 @@ Config = TypedDict('Config', {
 	"totp_as_extra_entry": str,
 	"idle_timeout": int,
 	"autotype": str,
-	"autotype_delay": int
+	"autotype_delay": int,
+	"clipboard_clear_delay": int
 })
 
 Entry = TypedDict('Entry', {

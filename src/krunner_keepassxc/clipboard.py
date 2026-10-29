@@ -15,20 +15,23 @@ class Clipboard:
 		self.check_executables()
 
 	def check_executables(self):
-		copy, paste = None, None
+		copy, paste, clear = None, None, None
 		self.can_clip = True
 		self.bus = dbus.SessionBus()
 
 		try:
 			self.klipper = self.bus.get_object('org.kde.klipper', '/klipper')
 			copy = self.init_klipper_clipboard()
+			clear = self._clear_klipper
 
 		except dbus.exceptions.DBusException:
 
 			if self._executable_exists("xclip"):
 				copy, paste = self.init_xclip_clipboard()
+				clear = self._clear_xclip
 			elif self._executable_exists("xsel"):
 				copy, paste = self.init_xsel_clipboard()
+				clear = self._clear_xsel
 			else:
 				self.can_clip = False
 
@@ -37,6 +40,7 @@ class Clipboard:
 		# The previous method stays as fallback in case wl-copy fails.
 		if self._wl_copy_sensitive_supported():
 			copy = self.init_wl_copy_clipboard(fallback=copy)
+			clear = self._make_wl_clear(fallback=clear)
 			self.can_clip = True
 
 		# FIXME: mypy issue #2427
@@ -44,12 +48,51 @@ class Clipboard:
 			self.copy = copy
 		if paste:
 			self.paste = paste
+		if clear:
+			self.clear = clear
 
 	def copy(self, text: str, primary: bool=False):
 		raise NotImplementedError
 
 	def paste(self, text: str, primary: bool=False):
 		raise NotImplementedError
+
+	def clear(self, primary: bool=False):
+		"""empty the clipboard, whatever it currently contains"""
+		raise NotImplementedError
+
+	def _clear_klipper(self, primary: bool=False):
+		# clears the current clipboard (and selection), not klipper's history
+		klipper = dbus.Interface(self.klipper, dbus_interface='org.kde.klipper.klipper')
+		klipper.clearClipboardContents()
+
+	def _clear_xclip(self, primary: bool=False):
+		# xclip has no clear option, own the selection with empty content instead
+		subprocess.run(['xclip', '-selection', 'p' if primary else 'c'], input=b'',
+			stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False)
+
+	def _clear_xsel(self, primary: bool=False):
+		subprocess.run(['xsel', '-p' if primary else '-b', '--clear'],
+			stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False)
+
+	@staticmethod
+	def _make_wl_clear(fallback: Callable | None) -> Callable:
+
+		def clear_wl(primary: bool=False):
+			args = ['wl-copy', '--clear'] + (['--primary'] if primary else [])
+			try:
+				result = subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False)
+				if result.returncode == 0:
+					return
+				error = f'wl-copy --clear exited with {result.returncode}'
+			except (OSError, subprocess.SubprocessError) as e:
+				error = f'wl-copy --clear failed: {e}'
+			if fallback is None:
+				raise RuntimeError(error)
+			print(f'{error}, falling back', file=sys.stderr, flush=True)
+			fallback(primary)
+
+		return clear_wl
 
 	def _executable_exists(self, name: str):
 		return subprocess.call(['which', name], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0

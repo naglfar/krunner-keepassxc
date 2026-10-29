@@ -22,9 +22,10 @@ config: Config = {
 	"totp_as_extra_entry": "True",
 	"idle_timeout": 600,
 	"autotype": "False",
-	"autotype_delay": 300
+	"autotype_delay": 300,
+	"clipboard_clear_delay": 10
 }
-config_numbers = [ 'max_entries', 'idle_timeout', 'autotype_delay' ]
+config_numbers = [ 'max_entries', 'idle_timeout', 'autotype_delay', 'clipboard_clear_delay' ]
 config_comments = {
 	"trigger": "characters to trigger password lookup, can be empty (default)",
 	"max_entries": "maximum number of entries to list (default: 5)",
@@ -32,7 +33,8 @@ config_comments = {
 	"totp_as_extra_entry": "if you have TOTP entries they will show up as extra list entries instead of another action icon (true / false)",
 	"idle_timeout": "seconds without krunner requests after which the service exits, it gets restarted on demand via D-Bus activation (0 = never exit, default: 600)",
 	"autotype": "type the values into the focused window instead of copying them to the clipboard, needs libei on Wayland or libXtst on X11 (true / false)",
-	"autotype_delay": "milliseconds to wait before typing so krunner can close and the previous window regains focus (default: 300)"
+	"autotype_delay": "milliseconds to wait before typing so krunner can close and the previous window regains focus (default: 300)",
+	"clipboard_clear_delay": "seconds after which the clipboard is emptied after copying a value, regardless of what it contains by then (0 = never, default: 10)"
 }
 
 

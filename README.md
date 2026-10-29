@@ -75,7 +75,7 @@ $ ./krunner-keepassxc
 ```
 
 ### start using pip ###
-this will pull the files and dependencies (dbus-python, cryptography) into your global python installation
+this will pull the files and dependencies (dbus-fast, cryptography, …) into your global python installation
 ```
 $ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/2.0.0/krunner_-_keepassxc-2.0.0-py3-none-any.whl
 # see if it works:

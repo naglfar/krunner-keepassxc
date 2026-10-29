@@ -36,7 +36,8 @@ class KeepassRunner(ServiceInterface):
 		self.on_activity = on_activity
 
 		self.kp = KeepassPasswords(self.config, bus)
-		self.cp = Clipboard()
+		# shares the bus connection, the backend is picked on first use
+		self.cp = Clipboard(bus)
 		self.last_match = 0
 
 		self.autotype: Autotype | None = None
@@ -59,14 +60,14 @@ class KeepassRunner(ServiceInterface):
 		if self.on_activity:
 			self.on_activity()
 
-	def copy_to_clipboard(self, string: str) -> None:
+	async def copy_to_clipboard(self, string: str) -> None:
 		if string:
 			try:
-				self.cp.copy(string)
+				await self.cp.copy(string)
 			except NotImplementedError:
-				print('neither xsel nor xclip seem to be installed', flush=True)
+				print('no clipboard available (klipper not running, wl-copy >= 2.3.0 not installed)', flush=True)
 				return
-			except Exception as e:  # noqa: BLE001 - klipper (D-Bus), wl-copy, xclip and xsel all fail differently, never break the krunner call
+			except Exception as e:  # noqa: BLE001 - klipper (D-Bus) and wl-copy fail differently, never break the krunner call
 				print(str(e), flush=True)
 				return
 			self._schedule_clipboard_clear()
@@ -91,16 +92,16 @@ class KeepassRunner(ServiceInterface):
 		await asyncio.sleep(delay)
 		self._clear_task = None
 		try:
-			self.cp.clear()
+			await self.cp.clear()
 		except Exception as e:  # noqa: BLE001 - only log, there is nobody to report to
 			print(f'could not clear the clipboard: {e!r}', flush=True)
 
-	def output(self, string: str) -> None:
+	async def output(self, string: str) -> None:
 		"""auto-type the value if enabled, otherwise copy it to the clipboard"""
 		if not string:
 			return
 		if self.autotype is None:
-			self.copy_to_clipboard(string)
+			await self.copy_to_clipboard(string)
 			return
 		# don't block the D-Bus reply, krunner has to close before we can type
 		task = asyncio.create_task(self._autotype(self.autotype, string))
@@ -112,10 +113,10 @@ class KeepassRunner(ServiceInterface):
 			await autotype.type(string)
 		except (AutotypeError, OSError) as e:
 			print(f'autotype failed, copying to clipboard instead: {e}', flush=True)
-			self.copy_to_clipboard(string)
+			await self.copy_to_clipboard(string)
 		except Exception as e:  # noqa: BLE001 - never lose the value because of a libei/portal issue
 			print(f'autotype failed unexpectedly, copying to clipboard instead: {e!r}', flush=True)
-			self.copy_to_clipboard(string)
+			await self.copy_to_clipboard(string)
 
 	@dbus_method()
 	async def Actions(self) -> Annotated[
@@ -155,11 +156,11 @@ class KeepassRunner(ServiceInterface):
 			query = query[len(self.config['trigger']):].strip()
 
 			if not self.cp.can_clip:
-				self.cp.check_executables()
+				await self.cp.check_executables()
 
 			if not self.cp.can_clip:
 				matches = [
-					('', "Neither xsel nor xclip installed", self.config['icon'], 100, 0.1, {})
+					('', "No clipboard available", self.config['icon'], 100, 0.1, {})
 				]
 
 			elif len(await self.kp.get_entries()) == 0:
@@ -238,14 +239,14 @@ class KeepassRunner(ServiceInterface):
 
 			if action_id == 'user':
 				user = await self.kp.get_username(match_id)
-				self.output(user)
+				await self.output(user)
 			elif action_id == 'totp':
 				totp = await self.kp.get_totp(match_id)
 				if totp:
-					self.output(totp)
+					await self.output(totp)
 			else:
 				secret = await self.kp.get_secret(match_id)
-				self.output(secret)
+				await self.output(secret)
 
 			# clear last_match to skip needless check_cache
 			self.last_match = 0

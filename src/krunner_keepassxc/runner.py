@@ -44,6 +44,8 @@ class KeepassRunner(ServiceInterface):
 			else:
 				print('autotype enabled but not available (needs libei on Wayland or libXtst on X11), using the clipboard', flush=True)
 		self._tasks: set[asyncio.Task] = set()
+		# heading of the result group in krunner, overrides the Name of the .desktop file
+		self.category = 'KeePassXC: auto-type' if self.autotype else 'KeePassXC: copy to clipboard'
 
 	def _touch(self):
 		if self.on_activity:
@@ -179,7 +181,8 @@ class KeepassRunner(ServiceInterface):
 
 				self.last_match = time.time()
 
-		return matches
+		# same category for all results (including hints), otherwise they end up in separate groups
+		return [(*match[:5], {**match[5], 'category': Variant('s', self.category)}) for match in matches]
 
 	@dbus_method()
 	async def Run(self, match_id: DBusStr, action_id: DBusStr) -> DBusVariant:

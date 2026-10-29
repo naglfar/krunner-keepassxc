@@ -5,7 +5,7 @@ A krunner plugin to copy keepassxc entries to clipboard using its Freedesktop.or
 > :warning: with one of the newer versions (^2.7.1) keepassxc will turn off secret service integration until you disable kwallet. Either that or the newer versions of KDE plasma (^5.25) turn kwallet on if it used to be off. Not sure, but if the plugin suddenly stops working this might be the reason.
 
 ## Usage
-You can install the plugin through the krunner settings dialog or alternatively find it on the [web store](https://store.kde.org/p/1414906/), download the archive, extract and run the install.sh, which should get everything up and running.
+You can install the plugin through the krunner settings dialog or alternatively find it on the [web store](https://store.kde.org/p/1414906/), download the archive, extract and run the `install.sh`, which should get everything up and running.
 
 ### Requirements:
 - Python 3.14 (probably runs with 3.10+)
@@ -35,11 +35,14 @@ You can install the plugin through the krunner settings dialog or alternatively 
 On first start the plugin will create a config file with default values in `~/.config/krunner-keepassxc/config` (`~/.config` being $XDG_CONFIG_HOME) where you can add a few settings:
 - trigger word (default: empty)
 - max number of entries to show (default: 5)
-- icon (default: object-unlock, you can find possible values in /usr/share/icons/<your theme>/)
+- icon (default: object-unlock, you can find possible values in `/usr/share/icons/<your theme>/`)
 - totp_as_extra_entry (true / false, default: true): if you have TOTP set up in any entries they will show up as separate result entries with an added TOTP to the name, if false you will instead get a secondary action icon to copy the TOTP. Though, due to krunner limitations this action has no keyboard shortcut and will show up for all entries, even for those without TOTP configured, thus not being the default.
 - autotype (true / false, default: false): type the password / username / TOTP into the focused window instead of copying it to the clipboard, see below
 - autotype_delay (milliseconds, default: 300): time to wait before typing, so krunner can close and the previous window gets the focus back
+- clipboard_clear_delay (seconds, default: 10): empty the clipboard this many seconds after a value was copied, 0 disables it (see the warning below)
 - idle_timeout (seconds, default: 600): exit the service after this many seconds without a krunner request, it gets started again automatically on the next request. 0 keeps it running once started. For development you can override it on the command line, e.g. `uv run runner --idle-timeout 0`.
+
+> :warning: **The clipboard gets emptied `clipboard_clear_delay` seconds (default: 10) after copying a value, regardless of what it contains by then.** If you copy something else in the meantime, that gets cleared as well. Set `clipboard_clear_delay = 0` to disable this. Copying another value restarts the timer. Clearing only empties the current clipboard: when the value was copied through Klipper's D-Bus interface (no `wl-copy` >= 2.3.0 available), it stays in Klipper's history.
 
 The config file gets read on startup. To apply changes just stop the running service with `pkill -f "krunner-keepassxc run"`, it will be started again with the new config on the next krunner query.
 
@@ -59,7 +62,7 @@ If the compositor offers libei's text input (libei >= 1.6) the text is sent as c
 If auto-type fails for any reason the value is copied to the clipboard instead.
 
 ### Other Information:
-This is a python application communicating with krunner through D-Bus. It is started on demand by the D-Bus session bus (D-Bus activation) the first time krunner queries it, so no autostart entry or systemd unit is required. The install script places the executable at ~/.local/bin/krunner-keepassxc (you can run this for the CLI) and a D-Bus service file at ~/.local/share/dbus-1/services/de.naglfar.krunner-keepassxc.service. Older installations using a systemd user unit or an autostart entry are cleaned up by the install script.
+This is a python application communicating with krunner through D-Bus. It is started on demand by the D-Bus session bus (D-Bus activation) the first time krunner queries it, so no autostart entry or systemd unit is required. The install script places the executable at `~/.local/bin/krunner-keepassxc` (you can run this for the CLI) and a D-Bus service file at `~/.local/share/dbus-1/services/de.naglfar.krunner-keepassxc.service`. Older installations using a systemd user unit or an autostart entry are cleaned up by the install script.
 
 
 ## more manual ways of getting started ##
@@ -90,12 +93,12 @@ $ uv run cli -l # should list all the password labels in your database
 ```
 
 ### installing the krunner plugin  ###
-copy [install/krunner-keepassxc.desktop](install/krunner-keepassxc.desktop) to ~/.local/share/krunner/dbusplugins/ (~/.local/share/kservices5/ for plasma5)
+copy [`install/krunner-keepassxc.desktop`](install/krunner-keepassxc.desktop) to `~/.local/share/krunner/dbusplugins/` (`~/.local/share/kservices5/` for plasma5)
 after this krunner-keepassxc should already show up in krunner plugins but might require a reboot to actually work
 
 ### starting the service on demand (D-Bus activation) ###
-edit [install/de.naglfar.krunner-keepassxc.service](install/de.naglfar.krunner-keepassxc.service) and uncomment your scenario (`Exec` needs an absolute path),
-then copy to ~/.local/share/dbus-1/services/
+edit [`install/de.naglfar.krunner-keepassxc.service`](install/de.naglfar.krunner-keepassxc.service) and uncomment your scenario (`Exec` needs an absolute path),
+then copy to `~/.local/share/dbus-1/services/`
 ```
 $ mkdir -p ~/.local/share/dbus-1/services
 $ cp install/de.naglfar.krunner-keepassxc.service ~/.local/share/dbus-1/services/

@@ -1,6 +1,6 @@
 [Desktop Entry]
-Name=KeepassXC to Clipboard
-Comment=Find and copy secrets to clippboard
+Name=KeePassXC
+Comment=Find secrets and copy them to the clipboard or type them
 X-KDE-ServiceTypes=Plasma/Runner
 Type=Service
 Icon=object-unlocked

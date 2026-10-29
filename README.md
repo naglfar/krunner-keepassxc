@@ -36,9 +36,26 @@ On first start the plugin will create a config file with default values in `~/.c
 - max number of entries to show (default: 5)
 - icon (default: object-unlock, you can find possible values in /usr/share/icons/<your theme>/)
 - totp_as_extra_entry (true / false, default: true): if you have TOTP set up in any entries they will show up as separate result entries with an added TOTP to the name, if false you will instead get a secondary action icon to copy the TOTP. Though, due to krunner limitations this action has no keyboard shortcut and will show up for all entries, even for those without TOTP configured, thus not being the default.
+- autotype (true / false, default: false): type the password / username / TOTP into the focused window instead of copying it to the clipboard, see below
+- autotype_delay (milliseconds, default: 300): time to wait before typing, so krunner can close and the previous window gets the focus back
 - idle_timeout (seconds, default: 0): exit the service after this many seconds without a krunner request, it gets started again automatically on the next request. 0 keeps it running once started.
 
 The config file gets read on startup. To apply changes just stop the running service with `pkill -f "krunner-keepassxc run"`, it will be started again with the new config on the next krunner query.
+
+### Auto-type
+With `autotype = true` the values are typed into the window that had the focus before krunner opened.
+
+**Wayland** uses the XDG RemoteDesktop portal (keyboard only) and libei, so it needs:
+- a Wayland session (Plasma 6, KWin provides EIS through xdg-desktop-portal-kde)
+- the native `libei` library (Fedora/Arch: `libei`, Debian/Ubuntu: `libei1`) and `libxkbcommon`
+
+The first time something gets typed the portal asks for permission to control the keyboard, the approval is remembered (restore token in `~/.local/state/krunner-keepassxc/remotedesktop-token`, delete it to be asked again). While typing, Plasma briefly shows its "remote control" indicator in the system tray.
+
+If the compositor offers libei's text input (libei >= 1.6) the text is sent as characters, otherwise the characters are mapped to keys using the current keyboard layout; values containing characters that the layout can't produce are not typed at all.
+
+**X11** sends the keys with the XTEST extension, no permission dialog involved. It needs `libX11`, `libXtst`, `libxcb` and `libxkbcommon-x11`, which are installed on practically every X11 Plasma desktop. The current keyboard layout (including layout switching) and caps lock are taken into account, characters the layout can't produce abort typing the same way as on Wayland.
+
+If auto-type fails for any reason the value is copied to the clipboard instead.
 
 ### Other Information:
 This is a python application communicating with krunner through D-Bus. It is started on demand by the D-Bus session bus (D-Bus activation) the first time krunner queries it, so no autostart entry or systemd unit is required. The install script places the executable at ~/.local/bin/krunner-keepassxc (you can run this for the CLI) and a D-Bus service file at ~/.local/share/dbus-1/services/de.naglfar.krunner-keepassxc.service. Older installations using a systemd user unit or an autostart entry are cleaned up by the install script.

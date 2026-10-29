@@ -1,11 +1,11 @@
 import asyncio
 import subprocess
 import time
-from typing import cast
+from collections.abc import Generator
+from typing import Any, Self, cast
 
-import dbus
 import pyotp
-from dbus_fast import Variant
+from dbus_fast import DBusError, Variant
 from dbus_fast.aio import MessageBus
 
 from .dhcrypto import dhcrypto
@@ -13,6 +13,12 @@ from .types import Config, Entry
 
 
 class KeepassPasswords:
+	"""
+	Secret Service client for KeePassXC (dbus-fast).
+
+	The proxy interfaces are typed as Any: their call_*/get_*/on_* methods are generated
+	from the introspection data at runtime, so mypy can't know them.
+	"""
 
 	BUS_NAMES: tuple[str, ...] = (
 		'org.keepassxc.KeePassXC.MainWindow',
@@ -21,7 +27,7 @@ class KeepassPasswords:
 
 	BUS_NAME = 'org.keepassxc.KeePassXC.MainWindow'
 
-	bus: None
+	bus: MessageBus | None
 	_session: str | None
 	last_check: float | None
 	_entries: list[Entry]
@@ -31,13 +37,11 @@ class KeepassPasswords:
 
 	crypto: dhcrypto
 
-	def __init__(self, config = None, bus = None):
+	def __init__(self, config: Config | None = None, bus: MessageBus | None = None) -> None:
 
 		if config is None:
-			config = {}
-		self.bus = None
-		if bus:
-			self.bus = bus
+			config = cast(Config, {})
+		self.bus = bus
 
 		self._session = None
 		self.last_check = None
@@ -46,25 +50,29 @@ class KeepassPasswords:
 
 		self.crypto = dhcrypto()
 
-		self.__BUS_NAME = None
-
 		self.config = config
 
-	async def async_init(self):
+	async def async_init(self) -> Self:
 		if self.bus is None:
 			self.bus = await MessageBus().connect()
 
 		return self
 
-	def __await__(self):
+	def __await__(self) -> Generator[Any, None, Self]:
 		return self.async_init().__await__()
+
+	@property
+	def _bus(self) -> MessageBus:
+		if self.bus is None:
+			raise RuntimeError('not connected to D-Bus, pass a bus or await the KeepassPasswords instance first')
+		return self.bus
 
 	async def get_session(self) -> str | None:
 
 		if not self._session:
-			introspection = await self.bus.introspect(self.BUS_NAME, '/org/freedesktop/secrets')
-			secrets = self.bus.get_proxy_object(self.BUS_NAME, '/org/freedesktop/secrets', introspection)
-			iface = secrets.get_interface('org.freedesktop.Secret.Service')
+			introspection = await self._bus.introspect(self.BUS_NAME, '/org/freedesktop/secrets')
+			secrets = self._bus.get_proxy_object(self.BUS_NAME, '/org/freedesktop/secrets', introspection)
+			iface: Any = secrets.get_interface('org.freedesktop.Secret.Service')
 
 			if not self.crypto.active:
 				_output, session_path = await iface.call_open_session('plain', '')
@@ -80,25 +88,25 @@ class KeepassPasswords:
 
 		return self._session
 
-	def clear_session(self):
+	def clear_session(self) -> None:
 		self._session = None
 
-	def is_keepass_installed(self):
+	def is_keepass_installed(self) -> bool:
 		return subprocess.call(['which', "keepassxc"], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
 
-	def open_keepass(self):
+	def open_keepass(self) -> None:
 		# own process group, so keepassxc is not affected by signals to this service; output is never read,
 		# so don't attach pipes that could fill up and block it
 		subprocess.Popen(['keepassxc'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, process_group=0)
 
-	async def update_properties(self):
+	async def update_properties(self) -> None:
 		now = time.time()
 		# try to fetch every 5s if no entries, 30s when cached entries exist
 		if not self.last_check or (len(self._entries) == 0 and now - 5 > self.last_check) or ((now - 30 * 1 ) > self.last_check):
 			self.last_check = now
 			await self.fetch_data()
 
-	async def get_entries(self):
+	async def get_entries(self) -> list[Entry]:
 		await self.update_properties()
 		return self._entries
 
@@ -106,7 +114,7 @@ class KeepassPasswords:
 	def otp(self) -> bool:
 		return self._otp
 
-	async def fetch_data(self):
+	async def fetch_data(self) -> None:
 
 		entries: list[Entry] = []
 		self._otp = False
@@ -114,33 +122,33 @@ class KeepassPasswords:
 		try:
 
 			# find collections
-			introspection = await self.bus.introspect(self.BUS_NAME, '/org/freedesktop/secrets')
-			proxy_object = self.bus.get_proxy_object(self.BUS_NAME, '/org/freedesktop/secrets', introspection)
-			properties_iface = proxy_object.get_interface('org.freedesktop.DBus.Properties')
+			introspection = await self._bus.introspect(self.BUS_NAME, '/org/freedesktop/secrets')
+			proxy_object = self._bus.get_proxy_object(self.BUS_NAME, '/org/freedesktop/secrets', introspection)
+			properties_iface: Any = proxy_object.get_interface('org.freedesktop.DBus.Properties')
 			properties_variant = await properties_iface.call_get_all('org.freedesktop.Secret.Service')
 			collections = {k: v.value for k, v in properties_variant.items()}
 			# print([1, collections])
 
-			for collection_path in collections.get('Collections'):
+			for collection_path in collections.get('Collections', []):
 
 				# find collection entries
-				introspection = await self.bus.introspect(self.BUS_NAME, collection_path)
-				collection = self.bus.get_proxy_object(self.BUS_NAME, collection_path, introspection)
-				collection_iface = collection.get_interface('org.freedesktop.DBus.Properties')
+				introspection = await self._bus.introspect(self.BUS_NAME, collection_path)
+				collection = self._bus.get_proxy_object(self.BUS_NAME, collection_path, introspection)
+				collection_iface: Any = collection.get_interface('org.freedesktop.DBus.Properties')
 				properties_variant = await collection_iface.call_get_all('org.freedesktop.Secret.Collection')
 				items = {k: v.value for k, v in properties_variant.items()}
 				# print([2, items])
 
-				for item_path in items.get('Items'):
+				for item_path in items.get('Items', []):
 
-					introspection = await self.bus.introspect(self.BUS_NAME, item_path)
-					item = self.bus.get_proxy_object(self.BUS_NAME, item_path, introspection)
-					item_iface = item.get_interface('org.freedesktop.DBus.Properties')
+					introspection = await self._bus.introspect(self.BUS_NAME, item_path)
+					item = self._bus.get_proxy_object(self.BUS_NAME, item_path, introspection)
+					item_iface: Any = item.get_interface('org.freedesktop.DBus.Properties')
 					properties_variant = await item_iface.call_get_all('org.freedesktop.Secret.Item')
 					properties = {k: v.value for k, v in properties_variant.items()}
 
 					label = str(properties.get('Label'))
-					attr = properties.get('Attributes')
+					attr = properties.get('Attributes', {})
 					# print(attr)
 
 					entries.append({
@@ -164,16 +172,16 @@ class KeepassPasswords:
 						# print(e)
 						pass
 
-		except dbus.exceptions.DBusException as e:
+		except DBusError as e:
 			# keepassxc not running	or database closed
 			print(e)
 
 		self._entries = entries
 
-	def clear_cache(self):
+	def clear_cache(self) -> None:
 		self._entries = []
 
-	async def get_attribute(self, path: dbus.ObjectPath, attribute_name: str) -> str:
+	async def get_attribute(self, path: str, attribute_name: str) -> str:
 		attribute_value = ""
 		try:
 			entry = next(filter(lambda e: e["path"] == path, await self.get_entries()))
@@ -185,13 +193,13 @@ class KeepassPasswords:
 
 		return attribute_value
 
-	async def get_url(self, path: dbus.ObjectPath) -> str:
+	async def get_url(self, path: str) -> str:
 		return await self.get_attribute(path, 'URL')
 
-	async def get_username(self, path: dbus.ObjectPath) -> str:
+	async def get_username(self, path: str) -> str:
 		return await self.get_attribute(path, 'UserName')
 
-	async def get_totp(self, path: dbus.ObjectPath) -> str:
+	async def get_totp(self, path: str) -> str:
 		totp = ""
 		attr = await self.get_attribute(path, 'otp')
 		if attr:
@@ -202,24 +210,24 @@ class KeepassPasswords:
 
 		return totp
 
-	async def get_secret(self, path: dbus.ObjectPath) -> str:
+	async def get_secret(self, path: str) -> str:
 
-		introspection = await self.bus.introspect(self.BUS_NAME, path)
-		proxy_object = self.bus.get_proxy_object(self.BUS_NAME, path, introspection)
+		introspection = await self._bus.introspect(self.BUS_NAME, path)
+		proxy_object = self._bus.get_proxy_object(self.BUS_NAME, path, introspection)
 
-		path_iface = proxy_object.get_interface('org.freedesktop.Secret.Item')
+		path_iface: Any = proxy_object.get_interface('org.freedesktop.Secret.Item')
 
 		if await path_iface.get_locked():
 
-			introspection = await self.bus.introspect(self.BUS_NAME, '/org/freedesktop/secrets')
-			proxy_object = self.bus.get_proxy_object(self.BUS_NAME, '/org/freedesktop/secrets', introspection)
-			iface = proxy_object.get_interface('org.freedesktop.Secret.Service')
+			introspection = await self._bus.introspect(self.BUS_NAME, '/org/freedesktop/secrets')
+			proxy_object = self._bus.get_proxy_object(self.BUS_NAME, '/org/freedesktop/secrets', introspection)
+			iface: Any = proxy_object.get_interface('org.freedesktop.Secret.Service')
 
 			unlocked, prompt_path = await iface.call_unlock([path])
 
-			prompt_introspection = await self.bus.introspect(self.BUS_NAME, prompt_path)
-			prompt = self.bus.get_proxy_object(self.BUS_NAME, prompt_path, prompt_introspection)
-			prompt_iface = prompt.get_interface('org.freedesktop.Secret.Prompt')
+			prompt_introspection = await self._bus.introspect(self.BUS_NAME, prompt_path)
+			prompt = self._bus.get_proxy_object(self.BUS_NAME, prompt_path, prompt_introspection)
+			prompt_iface: Any = prompt.get_interface('org.freedesktop.Secret.Prompt')
 
 			loop = asyncio.get_running_loop()
 			future = loop.create_future()
@@ -229,7 +237,8 @@ class KeepassPasswords:
 				pass
 
 			else:
-				def handler_function(dismissed: bool, passwordPath: str):
+				# Prompt.Completed(b dismissed, v result)
+				def handler_function(dismissed: bool, _result: Variant) -> None:
 					future.set_result(not dismissed)
 
 				prompt_iface.on_completed(handler_function)
@@ -239,20 +248,21 @@ class KeepassPasswords:
 				if not await future:
 					return ''
 
-		result = ''
+		# (session, parameters, value, content type) as returned by GetSecret
+		result: Any = None
 
 		try:
 			session = await self.get_session()
 			result = await path_iface.call_get_secret(str(session))
-		except dbus.exceptions.DBusException as e:
-			if e.args[0] == 'org.freedesktop.Secret.Error.NoSession':
+		except DBusError as e:
+			if e.type == 'org.freedesktop.Secret.Error.NoSession':
 				# retry with a new session
 				try:
 					self.clear_session()
 					session = await self.get_session()
 					result = await path_iface.call_get_secret(str(session))
-				except dbus.exceptions.DBusException as e:
-					print(e)
+				except DBusError as retry_error:
+					print(retry_error)
 			else:
 				print(e)
 

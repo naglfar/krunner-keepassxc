@@ -60,7 +60,7 @@ class AutotypeError(Exception):
 	pass
 
 
-def _log(method: str):
+def _log(method: str) -> None:
 	print(f'autotype: using {method}', flush=True)
 
 
@@ -98,7 +98,7 @@ def is_available() -> bool:
 
 class _TokenStore:
 
-	def __init__(self, app_name: str):
+	def __init__(self, app_name: str) -> None:
 		self.path = os.path.join(str(xdg_state_home()), app_name, 'remotedesktop-token')
 
 	def load(self) -> str | None:
@@ -108,7 +108,7 @@ class _TokenStore:
 		except OSError:
 			return None
 
-	def save(self, token: str | None):
+	def save(self, token: str | None) -> None:
 		if not token:
 			return
 		os.makedirs(os.path.dirname(self.path), mode=0o700, exist_ok=True)
@@ -116,7 +116,7 @@ class _TokenStore:
 		with os.fdopen(fd, 'w', encoding='utf-8') as file:
 			file.write(token)
 
-	def clear(self):
+	def clear(self) -> None:
 		with suppress(OSError):
 			os.unlink(self.path)
 
@@ -124,25 +124,25 @@ class _TokenStore:
 class _Portal:
 	"""Minimal RemoteDesktop portal client on top of dbus-fast"""
 
-	def __init__(self, bus: MessageBus, timeout: float):
+	def __init__(self, bus: MessageBus, timeout: float) -> None:
 		self.bus = bus
 		self.timeout = timeout
 		self.session: str | None = None
 		self._pending: dict[str, asyncio.Future] = {}
 		self.bus.add_message_handler(self._on_message)
 
-	async def setup(self):
+	async def setup(self) -> None:
 		await self._call('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus', 'AddMatch', 's',
 			[f"type='signal',interface='{IFACE_REQUEST}',member='Response'"])
 
-	def _on_message(self, msg: Message):
+	def _on_message(self, msg: Message) -> None:
 		if msg.message_type == MessageType.SIGNAL and msg.interface == IFACE_REQUEST \
 				and msg.member == 'Response' and msg.path in self._pending:
 			future = self._pending.pop(msg.path)
 			if not future.done():
 				future.set_result(msg.body)
 
-	async def _call(self, dest, path, iface, member, signature='', body=None) -> Message:
+	async def _call(self, dest: str, path: str, iface: str, member: str, signature: str = '', body: list | None = None) -> Message:
 		reply = await self.bus.call(Message(destination=dest, path=path, interface=iface, member=member,
 			signature=signature, body=body or []))
 		if reply is None or reply.message_type == MessageType.ERROR:
@@ -153,6 +153,8 @@ class _Portal:
 	async def _request(self, member: str, signature: str, args: list, options: dict) -> dict:
 		# subscribe before calling, the Response may arrive before the method reply
 		token = 'kpxc' + secrets.token_hex(8)
+		if self.bus.unique_name is None:
+			raise AutotypeError('not connected to the session bus')
 		sender = self.bus.unique_name.lstrip(':').replace('.', '_')
 		path = f'{PORTAL_PATH}/request/{sender}/{token}'
 		future = asyncio.get_running_loop().create_future()
@@ -194,7 +196,7 @@ class _Portal:
 		fd = reply.unix_fds[value] if reply.unix_fds and value < len(reply.unix_fds) else value
 		return os.dup(fd)
 
-	async def close(self):
+	async def close(self) -> None:
 		if self.session:
 			with suppress(Exception):
 				await self._call(PORTAL_BUS, self.session, IFACE_SESSION, 'Close')
@@ -204,7 +206,7 @@ class _Portal:
 class _XkbResolver:
 	"""Resolve characters to (evdev keycode, modifier keycodes) through an XKB keymap"""
 
-	def __init__(self, keymap_string: bytes, group: int = 0):
+	def __init__(self, keymap_string: bytes, group: int = 0) -> None:
 		name = ctypes.util.find_library('xkbcommon') or 'libxkbcommon.so.0'
 		xkb = ctypes.CDLL(name)
 		xkb.xkb_context_new.restype = ctypes.c_void_p
@@ -243,11 +245,11 @@ class _XkbResolver:
 			xkb.xkb_keymap_unref(keymap)
 			xkb.xkb_context_unref(ctx)
 
-	def _mod_bit(self, keymap, name: str) -> int:
+	def _mod_bit(self, keymap: int, name: str) -> int:
 		index = self.xkb.xkb_keymap_mod_get_index(keymap, name.encode())
 		return 0 if index == 0xffffffff else 1 << index
 
-	def _build(self, keymap, group: int):
+	def _build(self, keymap: int, group: int) -> None:
 		xkb = self.xkb
 		shift = self._mod_bit(keymap, 'Shift')
 		level3 = self._mod_bit(keymap, 'Mod5') | self._mod_bit(keymap, 'LevelThree')
@@ -326,12 +328,12 @@ class _XkbResolver:
 class _EiConnection:
 	"""libei sender wired into asyncio"""
 
-	def __init__(self, fd: int, name: str):
+	def __init__(self, fd: int, name: str) -> None:
 		self.sender = ei.Sender.create_for_fd(fd, name=name)
-		self.keyboard = None
-		self.text = None
+		self.keyboard: ei.Device | None = None
+		self.text: ei.Device | None = None
 		# what the compositor's seat offered, for diagnostics
-		self.seat_capabilities: tuple = ()
+		self.seat_capabilities: tuple[ei.DeviceCapability, ...] = ()
 		self.locked_mods = 0
 		self.group = 0
 		self._changed = asyncio.Event()
@@ -339,22 +341,28 @@ class _EiConnection:
 		self._loop.add_reader(self.sender.fd, self._dispatch)
 		self._dispatch()
 
-	def _dispatch(self):
+	def _dispatch(self) -> None:
 		self.sender.dispatch()
 		for event in self.sender.events:
 			etype = event.event_type
 			if etype is ei.EventType.SEAT_ADDED:
-				self.seat_capabilities = event.seat.capabilities
+				seat = event.seat
+				if seat is None:
+					continue
+				self.seat_capabilities = seat.capabilities
 				wanted = tuple(c for c in (ei.DeviceCapability.KEYBOARD, getattr(ei.DeviceCapability, 'TEXT', None))
-					if c is not None and c in event.seat.capabilities)
+					if c is not None and c in seat.capabilities)
 				if wanted:
-					event.seat.bind(wanted)
+					seat.bind(wanted)
 			elif etype is ei.EventType.DEVICE_RESUMED:
-				caps = event.device.capabilities
+				device = event.device
+				if device is None:
+					continue
+				caps = device.capabilities
 				if getattr(ei.DeviceCapability, 'TEXT', None) in caps:
-					self.text = event.device
+					self.text = device
 				if ei.DeviceCapability.KEYBOARD in caps:
-					self.keyboard = event.device
+					self.keyboard = device
 			elif etype is ei.EventType.KEYBOARD_MODIFIERS:
 				mods = event.keyboard_xkb_modifiers
 				self.locked_mods, self.group = mods.locked, mods.group
@@ -362,7 +370,7 @@ class _EiConnection:
 				self.keyboard = self.text = None
 		self._changed.set()
 
-	async def wait_for_devices(self, timeout: float, text_grace: float = 0.2):
+	async def wait_for_devices(self, timeout: float, text_grace: float = 0.2) -> None:
 		deadline = self._loop.time() + timeout
 		keyboard_since = None
 		while True:
@@ -380,7 +388,7 @@ class _EiConnection:
 			with suppress(asyncio.TimeoutError):
 				await asyncio.wait_for(self._changed.wait(), min(remaining, text_grace))
 
-	def close(self):
+	def close(self) -> None:
 		with suppress(Exception):
 			self._loop.remove_reader(self.sender.fd)
 		with suppress(Exception):
@@ -389,7 +397,7 @@ class _EiConnection:
 
 def _key_sequence(resolver: _XkbResolver, keys: list[tuple[int, list[int]]], caps_locked: bool) -> list[list[tuple[int, bool]]]:
 	"""(keycode, is_press) events grouped per typed character"""
-	def tap(code):
+	def tap(code: int) -> list[tuple[int, bool]]:
 		return [(code, True), (code, False)]
 
 	sequence = []
@@ -418,7 +426,7 @@ class _X11Keyboard:
 	XKB_STATE_MODS_LOCKED = 1 << 2
 	XKB_STATE_LAYOUT_EFFECTIVE = 1 << 7
 
-	def __init__(self):
+	def __init__(self) -> None:
 		x11, xtst, xcb, xkbx11, xkb = (ctypes.CDLL(_find_library(n, f)) for n, f in _X11_LIBRARIES)
 		x11.XOpenDisplay.restype = ctypes.c_void_p
 		x11.XOpenDisplay.argtypes = [ctypes.c_char_p]
@@ -431,7 +439,8 @@ class _X11Keyboard:
 		xcb.xcb_connect.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_int)]
 		xcb.xcb_connection_has_error.argtypes = [ctypes.c_void_p]
 		xcb.xcb_disconnect.argtypes = [ctypes.c_void_p]
-		xkbx11.xkb_x11_setup_xkb_extension.argtypes = [ctypes.c_void_p, ctypes.c_uint16, ctypes.c_uint16, ctypes.c_int] + [ctypes.c_void_p] * 4
+		xkbx11.xkb_x11_setup_xkb_extension.argtypes = [ctypes.c_void_p, ctypes.c_uint16, ctypes.c_uint16, ctypes.c_int,
+			ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
 		xkbx11.xkb_x11_get_core_keyboard_device_id.argtypes = [ctypes.c_void_p]
 		xkbx11.xkb_x11_get_core_keyboard_device_id.restype = ctypes.c_int32
 		xkbx11.xkb_x11_keymap_new_from_device.restype = ctypes.c_void_p
@@ -497,13 +506,13 @@ class _X11Keyboard:
 			if conn:
 				xcb.xcb_disconnect(conn)
 
-	def key(self, evdev_keycode: int, is_press: bool):
+	def key(self, evdev_keycode: int, is_press: bool) -> None:
 		self.xtst.XTestFakeKeyEvent(self.display, evdev_keycode + XKB_EVDEV_OFFSET, int(is_press), 0)
 
-	def flush(self):
+	def flush(self) -> None:
 		self.x11.XFlush(self.display)
 
-	def close(self):
+	def close(self) -> None:
 		if self.display:
 			self.x11.XSync(self.display, 0)
 			self.x11.XCloseDisplay(self.display)
@@ -512,7 +521,7 @@ class _X11Keyboard:
 
 class Autotype:
 
-	def __init__(self, app_name: str, delay: float = 0.3, key_delay: float = 0.01, timeout: float = 120):
+	def __init__(self, app_name: str, delay: float = 0.3, key_delay: float = 0.01, timeout: float = 120) -> None:
 		self.app_name = app_name
 		self.delay = delay
 		self.key_delay = key_delay
@@ -520,7 +529,7 @@ class Autotype:
 		self.tokens = _TokenStore(app_name)
 		self._lock = asyncio.Lock()
 
-	async def type(self, text: str):
+	async def type(self, text: str) -> None:
 		if not text:
 			return
 		match backend():
@@ -531,7 +540,7 @@ class Autotype:
 			case _:
 				raise AutotypeError('auto-type needs libei on Wayland or the XTEST libraries on X11')
 
-	async def _type_x11(self, text: str):
+	async def _type_x11(self, text: str) -> None:
 		async with self._lock:
 			# let krunner close and the previous window regain focus
 			await asyncio.sleep(self.delay)
@@ -550,7 +559,7 @@ class Autotype:
 			finally:
 				keyboard.close()
 
-	async def _type_wayland(self, text: str):
+	async def _type_wayland(self, text: str) -> None:
 		async with self._lock:
 			bus = await MessageBus(negotiate_unix_fd=True).connect()
 			portal = _Portal(bus, self.timeout)
@@ -574,7 +583,8 @@ class Autotype:
 					_log('libei text input (layout independent)')
 					await self._type_text(connection.text, text)
 				else:
-					offered = ', '.join(c.name for c in connection.seat_capabilities) or 'none'
+					# IntFlag.name is None for combined values, the seat only lists single ones
+					offered = ', '.join(c.name or str(int(c)) for c in connection.seat_capabilities) or 'none'
 					_log(f'libei keycodes via the keyboard layout, the compositor offered no text input '
 						f'(needs libei >= 1.6 in KWin and on this system; seat capabilities: {offered}; '
 						f'libei text support here: {_libei_text_supported()})')
@@ -585,7 +595,7 @@ class Autotype:
 				await portal.close()
 				bus.disconnect()
 
-	async def _type_text(self, device, text: str):
+	async def _type_text(self, device: ei.Device, text: str) -> None:
 		device.start_emulating()
 		try:
 			for char in text:
@@ -594,8 +604,10 @@ class Autotype:
 		finally:
 			device.stop_emulating()
 
-	async def _type_keys(self, connection: _EiConnection, text: str):
+	async def _type_keys(self, connection: _EiConnection, text: str) -> None:
 		device = connection.keyboard
+		if device is None:
+			raise AutotypeError('the compositor did not provide a keyboard device')
 		keymap = device.keymap
 		if keymap is None:
 			raise AutotypeError('the keyboard device has no keymap')

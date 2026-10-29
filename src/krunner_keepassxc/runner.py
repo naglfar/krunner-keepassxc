@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import time
+from collections.abc import Callable
 
 from dbus_fast import DBusError, NameFlag, RequestNameReply, Variant
 from dbus_fast.aio import MessageBus
@@ -11,6 +12,7 @@ from .autotype import Autotype, AutotypeError
 from .autotype import is_available as autotype_available
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
+from .types import Config
 
 BUS_NAME = "de.naglfar.krunner-keepassxc"
 OBJ_PATH="/krunner"
@@ -25,7 +27,7 @@ class KeepassRunner(ServiceInterface):
 	empty_action: str = ""
 	last_match: float
 
-	def __init__(self, config, bus, on_activity=None):
+	def __init__(self, config: Config, bus: MessageBus, on_activity: Callable[[], None] | None = None) -> None:
 		super().__init__(IFACE_KRUNNER)
 
 		# self.check_config()
@@ -53,11 +55,11 @@ class KeepassRunner(ServiceInterface):
 		"""background work still pending (auto-type, clearing the clipboard)"""
 		return bool(self._tasks)
 
-	def _touch(self):
+	def _touch(self) -> None:
 		if self.on_activity:
 			self.on_activity()
 
-	def copy_to_clipboard(self, string: str):
+	def copy_to_clipboard(self, string: str) -> None:
 		if string:
 			try:
 				self.cp.copy(string)
@@ -69,7 +71,7 @@ class KeepassRunner(ServiceInterface):
 				return
 			self._schedule_clipboard_clear()
 
-	def _schedule_clipboard_clear(self):
+	def _schedule_clipboard_clear(self) -> None:
 		try:
 			delay = int(self.config.get('clipboard_clear_delay', 10))
 		except (TypeError, ValueError):
@@ -85,7 +87,7 @@ class KeepassRunner(ServiceInterface):
 		self._tasks.add(task)
 		task.add_done_callback(self._tasks.discard)
 
-	async def _clear_clipboard_later(self, delay: int):
+	async def _clear_clipboard_later(self, delay: int) -> None:
 		await asyncio.sleep(delay)
 		self._clear_task = None
 		try:
@@ -93,7 +95,7 @@ class KeepassRunner(ServiceInterface):
 		except Exception as e:  # noqa: BLE001 - only log, there is nobody to report to
 			print(f'could not clear the clipboard: {e!r}', flush=True)
 
-	def output(self, string: str):
+	def output(self, string: str) -> None:
 		"""auto-type the value if enabled, otherwise copy it to the clipboard"""
 		if not string:
 			return
@@ -101,13 +103,13 @@ class KeepassRunner(ServiceInterface):
 			self.copy_to_clipboard(string)
 			return
 		# don't block the D-Bus reply, krunner has to close before we can type
-		task = asyncio.create_task(self._autotype(string))
+		task = asyncio.create_task(self._autotype(self.autotype, string))
 		self._tasks.add(task)
 		task.add_done_callback(self._tasks.discard)
 
-	async def _autotype(self, string: str):
+	async def _autotype(self, autotype: Autotype, string: str) -> None:
 		try:
-			await self.autotype.type(string)
+			await autotype.type(string)
 		except (AutotypeError, OSError) as e:
 			print(f'autotype failed, copying to clipboard instead: {e}', flush=True)
 			self.copy_to_clipboard(string)
@@ -265,7 +267,7 @@ class Runner:
 	request simply activates it again. ``run --idle-timeout 0`` keeps it running.
 	"""
 
-	def __init__(self, config):
+	def __init__(self, config: Config) -> None:
 		self.config = config
 		self._idle_handle: asyncio.TimerHandle | None = None
 		self._stop: asyncio.Event | None = None
@@ -277,7 +279,7 @@ class Runner:
 		except (TypeError, ValueError):
 			return 0
 
-	def _reset_idle_timer(self):
+	def _reset_idle_timer(self) -> None:
 		timeout = self._idle_timeout()
 		if timeout <= 0 or self._stop is None:
 			return
@@ -285,7 +287,7 @@ class Runner:
 			self._idle_handle.cancel()
 		self._idle_handle = asyncio.get_running_loop().call_later(timeout, self._on_idle)
 
-	def _on_idle(self):
+	def _on_idle(self) -> None:
 		if self._runner is not None and self._runner.busy:
 			# e.g. auto-type waiting for the portal's consent dialog, check again later
 			self._idle_handle = asyncio.get_running_loop().call_later(5, self._on_idle)
@@ -293,7 +295,7 @@ class Runner:
 		if self._stop is not None:
 			self._stop.set()
 
-	async def run(self):
+	async def run(self) -> None:
 		bus = await MessageBus().connect()
 
 		runner = KeepassRunner(self.config, bus, on_activity=self._reset_idle_timer)

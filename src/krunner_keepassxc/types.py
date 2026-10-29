@@ -1,7 +1,5 @@
 from typing import TypedDict
 
-from dbus import ObjectPath
-
 Config = TypedDict('Config', {
 	"trigger": str,
 	"max_entries": int,
@@ -15,6 +13,7 @@ Config = TypedDict('Config', {
 
 Entry = TypedDict('Entry', {
 	'label': str,
-	'path': ObjectPath,
+	# D-Bus object path of the secret item, ':totp' appended for the extra TOTP entries
+	'path': str,
 	'attributes': dict[str, str]
 })

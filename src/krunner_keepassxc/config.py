@@ -38,11 +38,11 @@ config_comments = {
 }
 
 
-def _config_entry(key: str, value) -> str:
+def _config_entry(key: str, value: object) -> str:
 	return f'# {config_comments[key]}\n{key} = {value}\n\n'
 
 
-def _add_config_entries(filename: str, keys: list[str]):
+def _add_config_entries(filename: str, keys: list[str]) -> None:
 	"""
 	add the given keys with their comment and default value to the [DEFAULT] section,
 	everything else in the file (comments, order, formatting) stays untouched
@@ -76,7 +76,7 @@ def _add_config_entries(filename: str, keys: list[str]):
 	os.replace(tmp, filename)
 
 
-def read_config():
+def read_config() -> Config:
 	filename = os.path.join(xdg_config_home(), app_name, 'config')
 	# plain ConfigParser, comments are skipped on reading; no interpolation so '%' is just a character
 	parser = configparser.ConfigParser(interpolation=None)
@@ -87,14 +87,19 @@ def read_config():
 	if missing:
 		_add_config_entries(filename, missing)
 
-	for k, v in section.items():
-		if k in config:
-			if k in config_numbers:
-				try:
-					v = int(cast(int, v))
-				except ValueError:
-					v = config[k]	# type: ignore
-			config[k] = v	# type: ignore
+	# config is a TypedDict, the keys are only known at runtime here
+	values = cast(dict[str, object], config)
+	for k, raw in section.items():
+		if k not in config:
+			continue
+		value: str | int = raw
+		if k in config_numbers:
+			try:
+				value = int(raw)
+			except ValueError:
+				# invalid number, keep the default
+				continue
+		values[k] = value
 
 	if len(config['trigger']) > 0: config['trigger'] += ' '
 	return config

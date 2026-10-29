@@ -7,7 +7,7 @@ from krunner_keepassxc.runner import Runner
 from .config import config, read_config
 
 
-async def main():
+async def main() -> None:
 
 	read_config()
 
@@ -93,12 +93,12 @@ async def main():
 		else:
 			parser.print_help()
 
-def runner():
+def runner() -> None:
 	import sys
 	sys.argv.insert(1, 'run')
 	asyncio.run(main())
 
-def cli():
+def cli() -> None:
 	asyncio.run(main())
 
 if __name__ == '__main__':

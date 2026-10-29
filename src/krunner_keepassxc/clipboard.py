@@ -3,19 +3,32 @@ import shutil
 import subprocess
 import sys
 from collections.abc import Callable
+from typing import Any
 
 import dbus
+
+# backend functions, all called positionally: (text, primary) / (primary)
+CopyFunc = Callable[[str, bool], None]
+PasteFunc = Callable[[bool], str]
+ClearFunc = Callable[[bool], None]
 
 
 class Clipboard:
 
 	can_clip: bool
+	bus: Any
+	klipper: Any
+	_copy: CopyFunc | None
+	_paste: PasteFunc | None
+	_clear: ClearFunc | None
 
-	def __init__(self):
+	def __init__(self) -> None:
 		self.check_executables()
 
-	def check_executables(self):
-		copy, paste, clear = None, None, None
+	def check_executables(self) -> None:
+		copy: CopyFunc | None = None
+		paste: PasteFunc | None = None
+		clear: ClearFunc | None = None
 		self.can_clip = True
 		self.bus = dbus.SessionBus()
 
@@ -43,42 +56,42 @@ class Clipboard:
 			clear = self._make_wl_clear(fallback=clear)
 			self.can_clip = True
 
-		# FIXME: mypy issue #2427
-		if copy:
-			self.copy = copy
-		if paste:
-			self.paste = paste
-		if clear:
-			self.clear = clear
+		self._copy, self._paste, self._clear = copy, paste, clear
 
-	def copy(self, text: str, primary: bool=False):
-		raise NotImplementedError
+	def copy(self, text: str, primary: bool=False) -> None:
+		if self._copy is None:
+			raise NotImplementedError
+		self._copy(text, primary)
 
-	def paste(self, text: str, primary: bool=False):
-		raise NotImplementedError
+	def paste(self, primary: bool=False) -> str:
+		if self._paste is None:
+			raise NotImplementedError
+		return self._paste(primary)
 
-	def clear(self, primary: bool=False):
+	def clear(self, primary: bool=False) -> None:
 		"""empty the clipboard, whatever it currently contains"""
-		raise NotImplementedError
+		if self._clear is None:
+			raise NotImplementedError
+		self._clear(primary)
 
-	def _clear_klipper(self, primary: bool=False):
+	def _clear_klipper(self, primary: bool=False) -> None:
 		# clears the current clipboard (and selection), not klipper's history
 		klipper = dbus.Interface(self.klipper, dbus_interface='org.kde.klipper.klipper')
 		klipper.clearClipboardContents()
 
-	def _clear_xclip(self, primary: bool=False):
+	def _clear_xclip(self, primary: bool=False) -> None:
 		# xclip has no clear option, own the selection with empty content instead
 		subprocess.run(['xclip', '-selection', 'p' if primary else 'c'], input=b'',
 			stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False)
 
-	def _clear_xsel(self, primary: bool=False):
+	def _clear_xsel(self, primary: bool=False) -> None:
 		subprocess.run(['xsel', '-p' if primary else '-b', '--clear'],
 			stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False)
 
 	@staticmethod
-	def _make_wl_clear(fallback: Callable | None) -> Callable:
+	def _make_wl_clear(fallback: ClearFunc | None) -> ClearFunc:
 
-		def clear_wl(primary: bool=False):
+		def clear_wl(primary: bool=False) -> None:
 			args = ['wl-copy', '--clear'] + (['--primary'] if primary else [])
 			try:
 				result = subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False)
@@ -94,7 +107,7 @@ class Clipboard:
 
 		return clear_wl
 
-	def _executable_exists(self, name: str):
+	def _executable_exists(self, name: str) -> bool:
 		return subprocess.call(['which', name], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
 
 	@staticmethod
@@ -108,9 +121,9 @@ class Clipboard:
 			return False
 		return '--sensitive' in result.stdout + result.stderr
 
-	def init_wl_copy_clipboard(self, fallback: Callable | None) -> Callable:
+	def init_wl_copy_clipboard(self, fallback: CopyFunc | None) -> CopyFunc:
 
-		def copy_wl(text: str, primary: bool=False):
+		def copy_wl(text: str, primary: bool=False) -> None:
 			# wl-copy buffers stdin in a temp file (unlinked right away), keep it on the
 			# per-user tmpfs instead of a possibly disk backed /tmp
 			env = dict(os.environ)
@@ -138,19 +151,19 @@ class Clipboard:
 
 		return copy_wl
 
-	def init_klipper_clipboard(self) -> Callable:
+	def init_klipper_clipboard(self) -> CopyFunc:
 
-		def copy_klipper(text: str, primary: bool=False):
+		def copy_klipper(text: str, primary: bool=False) -> None:
 			klipper = dbus.Interface(self.klipper, dbus_interface='org.kde.klipper.klipper')
 			klipper.setClipboardContents(text)
 
 		return copy_klipper
 
-	def init_xclip_clipboard(self) -> tuple[Callable,Callable]:
+	def init_xclip_clipboard(self) -> tuple[CopyFunc, PasteFunc]:
 		DEFAULT_SELECTION: str = 'c'
 		PRIMARY_SELECTION: str = 'p'
 
-		def copy_xclip(text: str, primary: bool=False):
+		def copy_xclip(text: str, primary: bool=False) -> None:
 			selection = DEFAULT_SELECTION
 			if primary:
 				selection = PRIMARY_SELECTION
@@ -173,11 +186,11 @@ class Clipboard:
 
 		return copy_xclip, paste_xclip
 
-	def init_xsel_clipboard(self) -> tuple[Callable,Callable]:
+	def init_xsel_clipboard(self) -> tuple[CopyFunc, PasteFunc]:
 		DEFAULT_SELECTION: str = '-b'
 		PRIMARY_SELECTION: str = '-p'
 
-		def copy_xsel(text: str, primary: bool=False):
+		def copy_xsel(text: str, primary: bool=False) -> None:
 			selection_flag = DEFAULT_SELECTION
 			if primary:
 				selection_flag = PRIMARY_SELECTION
@@ -186,7 +199,7 @@ class Clipboard:
 			if stderr:
 				print(stderr, file=sys.stderr)
 
-		def paste_xsel(primary: bool=False):
+		def paste_xsel(primary: bool=False) -> str:
 			selection_flag = DEFAULT_SELECTION
 			if primary:
 				selection_flag = PRIMARY_SELECTION

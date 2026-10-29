@@ -24,15 +24,15 @@ class dhcryptoss:
 
 	active = True
 
-	def __init__(self):
+	def __init__(self) -> None:
 		self.pkey = int.from_bytes(os.urandom(0x80), 'big')
 		self.pubkey = pow(2, self.pkey, self.DH_PRIME_1024)
 		self.aes_key = b''
 
-	def pubkey_as_list(self):
+	def pubkey_as_list(self) -> list[int]:
 		return list(int_to_bytes(self.pubkey))
 
-	def set_server_public_key(self, server_public_key):
+	def set_server_public_key(self, server_public_key: bytes | bytearray) -> None:
 		common_secret_int = pow(int.from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
 		common_secret = int_to_bytes(common_secret_int)
 		# Prepend NULL bytes if needed
@@ -44,7 +44,7 @@ class dhcryptoss:
 		# Resulting AES key should be 128-bit
 		self.aes_key = output_block[:0x10]
 
-	def decrypt_message(self, secret):
+	def decrypt_message(self, secret: tuple[str, bytes, bytes]) -> str:
 		aes = algorithms.AES(self.aes_key)
 		aes_iv = bytes(secret[1])
 		decryptor = Cipher(aes, modes.CBC(aes_iv), default_backend()).decryptor()
@@ -53,7 +53,7 @@ class dhcryptoss:
 		assert isinstance(padded_secret, bytes)
 		return padded_secret[:-padded_secret[-1]].decode('utf-8')
 
-	def encrypt_message(self, secret):
+	def encrypt_message(self, secret: str | bytes) -> tuple[str, bytes, bytes]:
 		if isinstance(secret, str):
 			secret = secret.encode('utf-8')
 		elif not isinstance(secret, bytes):

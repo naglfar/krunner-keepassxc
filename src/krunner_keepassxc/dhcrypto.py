@@ -1,5 +1,4 @@
 import os
-from collections.abc import Sequence
 
 CRYPTOGRAPHY_MISSING = False
 try:
@@ -37,7 +36,7 @@ class dhcrypto:
 	pkey: int
 	pubkey: int
 
-	def __init__(self):
+	def __init__(self) -> None:
 		if CRYPTOGRAPHY_MISSING:
 			self.active = False
 		else:
@@ -50,7 +49,7 @@ class dhcrypto:
 	def pubkey_as_bytes(self) -> bytes:
 		return int_to_bytes(self.pubkey)
 
-	def set_server_public_key(self, server_public_key: Sequence):
+	def set_server_public_key(self, server_public_key: bytes | bytearray) -> None:
 		common_secret_int = pow(int.from_bytes(server_public_key, 'big'), self.pkey, self.DH_PRIME_1024)
 		common_secret = int_to_bytes(common_secret_int)
 

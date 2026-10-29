@@ -10,6 +10,7 @@ You can install the plugin through the krunner settings dialog or alternatively 
 ### Requirements:
 - Python 3.14 (probably runs with 3.10+)
 - KeepassXC installed and configured for Freedesktop.org Secret Service access (See below)
+- optional, Wayland: `wl-clipboard` >= 2.3.0, copied secrets are then marked as passwords (`wl-copy --sensitive`) and kept out of the Klipper history; without it the plugin falls back to Klipper's D-Bus interface, where they do show up in the history
 
 ### Enable Secret Service in KeepassXC:
 * Open KeepassXC client

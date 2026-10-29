@@ -1,11 +1,11 @@
 import hmac
-import math
 import os
 from hashlib import sha256
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.utils import int_to_bytes
+
 
 #crypto from SecretStorage for testing
 class dhcryptoss:

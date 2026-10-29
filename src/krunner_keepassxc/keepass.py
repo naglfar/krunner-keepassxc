@@ -1,6 +1,4 @@
-#!/bin/env python3
 import asyncio
-import os
 import subprocess
 import time
 from typing import cast
@@ -16,10 +14,10 @@ from .types import Config, Entry
 
 class KeepassPasswords:
 
-	BUS_NAMES: list[str] = [
+	BUS_NAMES: tuple[str, ...] = (
 		'org.keepassxc.KeePassXC.MainWindow',
 		'org.freedesktop.secrets'
-	]
+	)
 
 	BUS_NAME = 'org.keepassxc.KeePassXC.MainWindow'
 
@@ -33,8 +31,10 @@ class KeepassPasswords:
 
 	crypto: dhcrypto
 
-	def __init__(self, config = {}, bus = None):
+	def __init__(self, config = None, bus = None):
 
+		if config is None:
+			config = {}
 		self.bus = None
 		if bus:
 			self.bus = bus
@@ -87,7 +87,9 @@ class KeepassPasswords:
 		return subprocess.call(['which', "keepassxc"], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
 
 	def open_keepass(self):
-		subprocess.Popen(['keepassxc'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setpgrp)
+		# own process group, so keepassxc is not affected by signals to this service; output is never read,
+		# so don't attach pipes that could fill up and block it
+		subprocess.Popen(['keepassxc'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, process_group=0)
 
 	async def update_properties(self):
 		now = time.time()
@@ -195,8 +197,8 @@ class KeepassPasswords:
 		if attr:
 			try:
 				totp = cast(pyotp.TOTP, pyotp.parse_uri(attr)).now()
-			except Exception as e:
-				print(e)
+			except ValueError as e:
+				print(f'invalid TOTP configuration: {e}', flush=True)
 
 		return totp
 

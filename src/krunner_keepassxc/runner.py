@@ -64,7 +64,7 @@ class KeepassRunner(ServiceInterface):
 			except NotImplementedError:
 				print('neither xsel nor xclip seem to be installed', flush=True)
 				return
-			except Exception as e:
+			except Exception as e:  # noqa: BLE001 - klipper (D-Bus), wl-copy, xclip and xsel all fail differently, never break the krunner call
 				print(str(e), flush=True)
 				return
 			self._schedule_clipboard_clear()

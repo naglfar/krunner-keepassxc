@@ -1,6 +1,6 @@
 [project]
 name = "krunner-keepassxc"
-version = "2.0.0"
+version = "2.1.0"
 description = ""
 authors = [{ name = "naglfar", email = "stefan@mtztech.info" }]
 requires-python = ">=3.14,<4"
@@ -51,7 +51,7 @@ nuitka = """cd src && uv run python -m nuitka \
         --python-flag=-m \
         krunner_keepassxc
     """
-store = """tar czf dist/krunner-keepassxc-store-2.0.0.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc"""
+store = """tar czf dist/krunner-keepassxc-store-2.1.0.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc"""
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

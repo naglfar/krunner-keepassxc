@@ -60,6 +60,19 @@ class AutotypeError(Exception):
 	pass
 
 
+def _log(method: str):
+	print(f'autotype: using {method}', flush=True)
+
+
+def _libei_text_supported() -> bool:
+	"""the local libei exports the text API (libei >= 1.6)"""
+	try:
+		lib = ctypes.CDLL(_find_library('ei', 'libei.so.1'))
+		return hasattr(lib, 'ei_device_text_utf8')
+	except OSError:
+		return False
+
+
 def _find_library(name: str, fallback: str) -> str:
 	return ctypes.util.find_library(name) or fallback
 
@@ -317,6 +330,8 @@ class _EiConnection:
 		self.sender = ei.Sender.create_for_fd(fd, name=name)
 		self.keyboard = None
 		self.text = None
+		# what the compositor's seat offered, for diagnostics
+		self.seat_capabilities: tuple = ()
 		self.locked_mods = 0
 		self.group = 0
 		self._changed = asyncio.Event()
@@ -329,6 +344,7 @@ class _EiConnection:
 		for event in self.sender.events:
 			etype = event.event_type
 			if etype is ei.EventType.SEAT_ADDED:
+				self.seat_capabilities = event.seat.capabilities
 				wanted = tuple(c for c in (ei.DeviceCapability.KEYBOARD, getattr(ei.DeviceCapability, 'TEXT', None))
 					if c is not None and c in event.seat.capabilities)
 				if wanted:
@@ -521,6 +537,7 @@ class Autotype:
 			await asyncio.sleep(self.delay)
 			keyboard = _X11Keyboard()
 			try:
+				_log('XTEST keycodes via the keyboard layout (X11)')
 				data, group, locked = keyboard.keymap()
 				resolver = _XkbResolver(data, group)
 				# resolve everything first, never type a secret partially
@@ -554,8 +571,13 @@ class Autotype:
 				await asyncio.sleep(self.delay)
 
 				if connection.text is not None:
+					_log('libei text input (layout independent)')
 					await self._type_text(connection.text, text)
 				else:
+					offered = ', '.join(c.name for c in connection.seat_capabilities) or 'none'
+					_log(f'libei keycodes via the keyboard layout, the compositor offered no text input '
+						f'(needs libei >= 1.6 in KWin and on this system; seat capabilities: {offered}; '
+						f'libei text support here: {_libei_text_supported()})')
 					await self._type_keys(connection, text)
 			finally:
 				if connection:

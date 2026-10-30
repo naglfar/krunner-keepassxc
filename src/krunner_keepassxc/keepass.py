@@ -32,6 +32,7 @@ class KeepassPasswords:
 	last_check: float | None
 	_entries: list[Entry]
 	_otp: bool = False
+	_fetch_task: asyncio.Task[None] | None
 
 	config: Config
 
@@ -47,6 +48,7 @@ class KeepassPasswords:
 		self.last_check = None
 
 		self._entries = []
+		self._fetch_task = None
 
 		self.crypto = dhcrypto()
 
@@ -100,11 +102,36 @@ class KeepassPasswords:
 		subprocess.Popen(['keepassxc'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, process_group=0)
 
 	async def update_properties(self) -> None:
-		now = time.time()
-		# try to fetch every 5s if no entries, 30s when cached entries exist
-		if not self.last_check or (len(self._entries) == 0 and now - 5 > self.last_check) or ((now - 30 * 1 ) > self.last_check):
+		"""
+		Refresh the cached entries when due: every 5s while there are none, every 30s otherwise.
+
+		krunner sends its calls concurrently (Actions, one Match per keystroke), so all callers
+		share one fetch. While there are no entries yet (e.g. right after D-Bus activation) they
+		wait for it instead of getting the still empty list; with cached entries a refresh runs
+		in the background and the cache keeps being used meanwhile.
+		"""
+		if self._fetch_task is None or self._fetch_task.done():
+			now = time.time()
+			due = (
+				not self.last_check
+				or (not self._entries and now - 5 > self.last_check)
+				or now - 30 > self.last_check
+			)
+			if not due:
+				return
 			self.last_check = now
-			await self.fetch_data()
+			self._fetch_task = asyncio.create_task(self.fetch_data())
+			self._fetch_task.add_done_callback(self._fetch_done)
+
+		if not self._entries:
+			# shield: a cancelled krunner call must not abort the fetch the others are waiting for
+			await asyncio.shield(self._fetch_task)
+
+	@staticmethod
+	def _fetch_done(task: asyncio.Task[None]) -> None:
+		# background refreshes are not awaited by anyone, report their errors here
+		if not task.cancelled() and task.exception() is not None:
+			print(f'fetching the entries failed: {task.exception()!r}', flush=True)
 
 	async def get_entries(self) -> list[Entry]:
 		await self.update_properties()
@@ -116,8 +143,9 @@ class KeepassPasswords:
 
 	async def fetch_data(self) -> None:
 
+		# built locally and assigned at the end, callers keep using the previous state meanwhile
 		entries: list[Entry] = []
-		self._otp = False
+		otp = False
 
 		try:
 
@@ -159,7 +187,7 @@ class KeepassPasswords:
 
 					try:
 						if attr['otp']:
-							self._otp = True
+							otp = True
 
 							if "totp_as_extra_entry" in self.config and self.config["totp_as_extra_entry"].lower() != 'false':
 								entries.append({
@@ -177,6 +205,7 @@ class KeepassPasswords:
 			print(e)
 
 		self._entries = entries
+		self._otp = otp
 
 	def clear_cache(self) -> None:
 		self._entries = []

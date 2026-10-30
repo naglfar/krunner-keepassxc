@@ -31,14 +31,34 @@ class SearchTests(unittest.TestCase):
 		self.assertEqual(labels(search(entries, 'STEFAN')), ['Forum'])
 		self.assertEqual(search(entries, 'nothing'), [])
 
-	def test_all_words_must_occur_in_the_same_attribute(self) -> None:
+	def test_words_may_be_spread_over_the_attributes(self) -> None:
 		entries = [
 			entry('Bank', path='Root/Finance/Bank', user='alice'),
 		]
 		self.assertEqual(labels(search(entries, 'finance bank')), ['Bank'])
 		self.assertEqual(labels(search(entries, 'bank finance')), ['Bank'])  # order of the words doesn't matter
-		# one word in the path, the other one in the user name: no match
-		self.assertEqual(search(entries, 'bank alice'), [])
+		self.assertEqual(labels(search(entries, 'bank alice')), ['Bank'])    # path and user name
+		self.assertEqual(search(entries, 'bank bob'), [])                    # every word has to be found
+
+	def test_service_and_account(self) -> None:
+		entries = [
+			entry('GitHub', user='max'),                               # wrong account: not found
+			entry('Stefan GitHub', user='other'),                      # both words start words of the title
+			entry('GitHub Enterprise', user='stefan'),                 # title starts with "github", user stefan
+			entry('GitHub', user='stefan'),                            # title is "github", user stefan
+			entry('Code', url='https://github.com', user='stefan'),    # service only in the host name
+			entry('Notes', path='Root/github/Notes', user='stefan'),   # neither in the title nor the host
+		]
+		# all words in the title first, then the ones with the account in the user name
+		self.assertEqual(labels(search(entries, 'github stefan')),
+			['Stefan GitHub', 'GitHub', 'GitHub Enterprise', 'Code', 'Notes'])
+
+	def test_words_in_one_attribute_rank_first_on_equal_score(self) -> None:
+		entries = [
+			entry('A', path='Root/work/A', user='mail'),               # spread over path and user name
+			entry('B', path='Root/work mail/B'),                       # both in the path
+		]
+		self.assertEqual(labels(search(entries, 'work mail')), ['B', 'A'])
 
 	def test_ranking(self) -> None:
 		entries = [

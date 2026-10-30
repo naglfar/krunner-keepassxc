@@ -7,7 +7,14 @@ from .types import Entry
 # Path contains the group and the title of the entry
 SEARCHED_ATTRIBUTES = ('Path', 'URL', 'UserName')
 
-# ranking, highest first
+# Ranking, highest first. Entries are grouped by how many words of the query are in the title (or
+# start a part of the URL's host name, which identifies the service just as well): all of them,
+# some (the others are in the group, user name or URL path, e.g. "github stefan" for the title
+# GitHub with the user name stefan), none. Within each group the tiers below are applied to
+# these words.
+BONUS_ALL_IN_TITLE = 200
+BONUS_SOME_IN_TITLE = 100
+
 SCORE_EXACT = 100        # title is the query
 SCORE_PREFIX = 80        # title starts with the query
 SCORE_WORD_START = 60    # every word of the query starts a word of the title ("mail" in "Work Mail", "git" in "MyGitHub")
@@ -42,13 +49,9 @@ def _every_word_starts(words: list[str], candidates: list[str]) -> bool:
 	return bool(candidates) and all(any(candidate.startswith(word) for candidate in candidates) for word in words)
 
 
-def score(entry: Entry, query: str) -> int:
-	"""how well an entry, that matched the query, fits it (see the SCORE_ constants)"""
-	query = query.lower().strip()
-	words = query.split()
+def _title_score(entry: Entry, words: list[str]) -> int:
 	label = entry['label'].lower()
-	if not words:
-		return SCORE_OTHER
+	query = ' '.join(words)
 	if label == query:
 		return SCORE_EXACT
 	if label.startswith(query):
@@ -57,24 +60,47 @@ def score(entry: Entry, query: str) -> int:
 		return SCORE_WORD_START
 	if _every_word_starts(words, _host_parts(entry['attributes'].get('URL', ''))):
 		return SCORE_HOST
-	if all(word in label for word in words):
-		return SCORE_CONTAINS
-	return SCORE_OTHER
+	return SCORE_CONTAINS
+
+
+def score(entry: Entry, query: str) -> int:
+	"""how well an entry, that matched the query, fits it (see the SCORE_ constants)"""
+	words = query.lower().split()
+	label = entry['label'].lower()
+	host = _host_parts(entry['attributes'].get('URL', ''))
+	in_title = [word for word in words if word in label or any(part.startswith(word) for part in host)]
+	if not in_title:
+		return SCORE_OTHER
+	bonus = BONUS_ALL_IN_TITLE if len(in_title) == len(words) else BONUS_SOME_IN_TITLE
+	return bonus + _title_score(entry, in_title)
+
+
+def _matches(entry: Entry, words: list[str]) -> bool:
+	"""every word occurs in one of the searched attributes, not necessarily the same one"""
+	values = [entry['attributes'].get(attribute, '').lower() for attribute in SEARCHED_ATTRIBUTES]
+	return all(any(word in value for value in values) for word in words)
+
+
+def _in_one_attribute(entry: Entry, words: list[str]) -> bool:
+	return any(
+		all(word in entry['attributes'].get(attribute, '').lower() for word in words)
+		for attribute in SEARCHED_ATTRIBUTES
+	)
 
 
 def search(entries: list[Entry], query: str) -> list[Entry]:
 	"""
-	Entries where all words of the query occur in one of the searched attributes, case insensitive.
+	Entries where every word of the query occurs in one of the searched attributes, case insensitive.
 
-	Best matches first (see score()), alphabetically by title within the same score.
+	Best matches first (see score()); with the same score, entries having all words in one
+	attribute come first, then alphabetically by title.
 	"""
-	words = query.lower().split(' ')
-	found = [
-		entry for entry in entries
-		if any(
-			all(word in entry['attributes'].get(attribute, '').lower() for word in words)
-			for attribute in SEARCHED_ATTRIBUTES
-		)
-	]
-	found.sort(key=lambda entry: (-score(entry, query), entry['label'].casefold(), entry['label']))
+	words = query.lower().split()
+	found = [entry for entry in entries if _matches(entry, words)]
+	found.sort(key=lambda entry: (
+		-score(entry, query),
+		not _in_one_attribute(entry, words),
+		entry['label'].casefold(),
+		entry['label'],
+	))
 	return found

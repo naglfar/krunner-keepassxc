@@ -123,6 +123,15 @@ class MatchTests(unittest.IsolatedAsyncioTestCase):
 		self.assertEqual(properties['subtext'].value, 'user1')
 		self.assertEqual(properties['category'].value, 'KeePassXC: copy to clipboard')
 
+	async def test_subtext_shows_where_a_match_was_found(self) -> None:
+		in_group = cast(Entry, {'label': 'Mail', 'path': '/1', 'attributes': {'Path': '/Work/Mail', 'URL': '', 'UserName': 'stefan'}})
+		no_user = cast(Entry, {'label': 'Forum', 'path': '/2', 'attributes': {'Path': '/Work/Forum', 'URL': '', 'UserName': ''}})
+		runner = make_runner([in_group, no_user])
+		subtexts = {m[1]: m[5]['subtext'].value for m in await match(runner, 'work')}
+		self.assertEqual(subtexts, {'Mail': 'stefan · Work', 'Forum': 'Work'})
+		# found through the title: only the user name
+		self.assertEqual([m[5]['subtext'].value for m in await match(runner, 'mail')], ['stefan'])
+
 	async def test_no_clipboard(self) -> None:
 		runner = make_runner([entry('Mail')], can_clip=False)
 		matches = await match(runner, 'mail')

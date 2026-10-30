@@ -12,7 +12,7 @@ from .autotype import Autotype, AutotypeError
 from .autotype import is_available as autotype_available
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
-from .search import search
+from .search import match_hint, search
 from .types import Config
 
 BUS_NAME = "de.naglfar.krunner-keepassxc"
@@ -192,7 +192,11 @@ class KeepassRunner(ServiceInterface):
 						# keeps the order of search(), always within (0, 1]
 						1 - i / (len(entries) + 1),
 						{
-							'subtext': Variant('s', await self.kp.get_username(entry["path"]))
+							# user name, plus the group or URL when the match isn't explained by the title
+							'subtext': Variant('s', ' · '.join(filter(None, (
+								await self.kp.get_username(entry["path"]),
+								match_hint(entry, query),
+							))))
 						}
 					) for i, entry in enumerate(entries)
 				]

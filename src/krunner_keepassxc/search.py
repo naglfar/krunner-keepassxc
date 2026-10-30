@@ -150,3 +150,46 @@ def search(entries: list[Entry], query: str) -> list[Entry]:
 			))
 	found.sort(key=lambda item: item[:5])
 	return [item[5] for item in found]
+
+
+def group(entry: Entry) -> str:
+	"""the entry's group path below the exposed group, from the Path attribute ("/Work/Projects/Title")"""
+	path = entry['attributes'].get('Path', '')
+	title = entry['label']
+	parent = path[:-len(title)] if title and path.endswith('/' + title) else path.rpartition('/')[0]
+	return parent.strip('/')
+
+
+def _short_url(url: str) -> str:
+	for scheme in ('https://', 'http://'):
+		if url.lower().startswith(scheme):
+			url = url[len(scheme):]
+	return url.rstrip('/')
+
+
+def match_hint(entry: Entry, query: str) -> str:
+	"""
+	Where the words of the query that are not in the title were found, so a result found only through
+	its group or URL is understandable: the group path and/or the URL. Empty when the title explains
+	the result; the user name is not repeated, it is shown anyway.
+	"""
+	labels = _forms(entry['label'])
+	rest = [word for word in _query_words(query) if not _occurs(word, labels)]
+	if not rest:
+		return ''
+	user = _forms(entry['attributes'].get('UserName', ''))
+	group_path = group(entry)
+	url = entry['attributes'].get('URL', '')
+	hints: list[str] = []
+	for word in rest:
+		if _occurs(word, user):
+			continue
+		if group_path and _occurs(word, _forms(group_path)):
+			hint = group_path
+		elif url and _occurs(word, _forms(url)):
+			hint = _short_url(url)
+		else:
+			continue
+		if hint not in hints:
+			hints.append(hint)
+	return ' · '.join(hints)

@@ -1,7 +1,7 @@
 import unittest
 from typing import cast
 
-from krunner_keepassxc.search import search
+from krunner_keepassxc.search import group, match_hint, search
 from krunner_keepassxc.types import Entry
 
 
@@ -133,6 +133,23 @@ class SearchTests(unittest.TestCase):
 	def test_host_names_with_umlauts(self) -> None:
 		entries = [entry('Shop', url='https://www.müller.de/login'), entry('Other', url='https://example.org')]
 		self.assertEqual(labels(search(entries, 'mueller')), ['Shop'])
+
+	def test_group(self) -> None:
+		# KeePassXC's Path: "/" + groups below the exposed group + title
+		self.assertEqual(group(entry('Mail', path='/Work/Projects/Mail')), 'Work/Projects')
+		self.assertEqual(group(entry('Mail', path='/Mail')), '')
+		self.assertEqual(group(entry('A/B', path='/Group/A/B')), 'Group')  # slash in the title
+
+	def test_match_hint(self) -> None:
+		mail = entry('Mail', path='/Work/Projects/Mail', url='https://github.com/login/', user='stefan')
+		self.assertEqual(match_hint(mail, 'mail'), '')                        # explained by the title
+		self.assertEqual(match_hint(mail, 'proj'), 'Work/Projects')           # group
+		self.assertEqual(match_hint(mail, 'github'), 'github.com/login')      # URL, without scheme
+		self.assertEqual(match_hint(mail, 'stefan'), '')                      # user name is shown anyway
+		self.assertEqual(match_hint(mail, 'mail work github'), 'Work/Projects · github.com/login')
+		self.assertEqual(match_hint(mail, 'work projects'), 'Work/Projects')  # listed once
+		umlaut = entry('Konto', path='/Bäckerei/Konto')
+		self.assertEqual(match_hint(umlaut, 'baeckerei'), 'Bäckerei')
 
 	def test_empty_query_returns_everything_sorted(self) -> None:
 		entries = [entry('b'), entry('Zahnarzt'), entry('Ärztekammer'), entry('A')]

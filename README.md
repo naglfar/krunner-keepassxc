@@ -79,8 +79,8 @@ this will pull the files and dependencies (dbus-fast, cryptography, …) into yo
 ```
 $ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/2.1.0/krunner_-_keepassxc-2.1.0-py3-none-any.whl
 # see if it works:
-$ python3 -m krunner-keepassxc -l  # should list all the password labels in your database
-$ python3 -m krunner-keepassxc run  # will start the dbus service for communicating with krunner
+$ python3 -m krunner_keepassxc -l  # should list all the password labels in your database
+$ python3 -m krunner_keepassxc run  # will start the dbus service for communicating with krunner
 ```
 
 ### using uv ###

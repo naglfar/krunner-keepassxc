@@ -41,7 +41,7 @@ lint = "pylint src/krunner_keepassxc"
 radon = "radon cc src/krunner_keepassxc"
 shiv = """shiv \
 		-p "/usr/bin/env python3" \
-		-e krunner_keepassxc.__main__:main \
+		-e krunner_keepassxc.__main__:cli \
 		--output-file dist/krunner-keepassxc.pyz \
 		."""
 nuitka = """cd src && uv run python -m nuitka \

@@ -1,65 +1,35 @@
 #!/bin/bash
-pwd=$(pwd)
+# Installs krunner-keepassxc for the current user. Run it from the extracted store archive,
+# KNewStuff ("Get New Plugins…" in the Plasma Search settings) does this automatically.
+set -u -o pipefail
 
-bin="$HOME/.local/bin"
-mkdir -p "${bin}"
-# remove old version if exists
-rm -f "$bin/krunner-keepassxc.pyz"
-cp "$pwd/krunner-keepassxc" "$bin/"
-chmod +x "$bin/krunner-keepassxc"
-exec="$bin/krunner-keepassxc run"
+# work relative to this script, not to the current directory
+cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" || { echo "error: can't change into the installer directory" >&2; exit 1; }
+# shellcheck source=common.sh
+. ./common.sh 2>/dev/null || { echo "error: common.sh is missing, please extract the complete archive" >&2; exit 1; }
 
-data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+refuse_root
 
-# krunner plugin
-dbusplugins_path="$data_home/krunner/dbusplugins"
-mkdir -p "${dbusplugins_path}"
-cp krunner-keepassxc.desktop "${dbusplugins_path}/"
+# check the package before changing anything, so a broken download leaves the old installation intact
+for file in krunner-keepassxc krunner-keepassxc.desktop "$SERVICE_NAME.service"; do
+	[ -f "$file" ] || die "$file is missing, please extract the complete archive"
+done
 
-# D-Bus activation file, the session bus starts the service on demand
-dbusservices_path="$data_home/dbus-1/services"
-mkdir -p "${dbusservices_path}"
-sed "s|##exec##|${exec}|" "de.naglfar.krunner-keepassxc.service" > "${dbusservices_path}/de.naglfar.krunner-keepassxc.service"
+# a systemd unit of a previous version would keep restarting the old binary
+cleanup_legacy
 
-# clean up previous installations (systemd user unit / autostart entry)
-if command -v systemctl >/dev/null 2>&1 && systemctl --user cat krunner-keepassxc.service >/dev/null 2>&1; then
-	systemctl --user disable --now krunner-keepassxc.service >/dev/null 2>&1
-fi
-rm -f "$data_home/systemd/user/krunner-keepassxc.service" \
-	"$HOME/.config/systemd/user/krunner-keepassxc.service" \
-	"$HOME/.config/autostart/krunner-keepassxc_autostart.desktop" \
-	"$data_home/autostart/krunner-keepassxc_autostart.desktop"
-command -v systemctl >/dev/null 2>&1 && systemctl --user daemon-reload >/dev/null 2>&1
+install_file krunner-keepassxc "$BIN" 755 || die "could not install $BIN"
+info "installed $BIN"
 
-# stop a still running instance so the new binary gets activated on next use
-pkill -f "krunner-keepassxc(\.pyz)? run"
+install_file krunner-keepassxc.desktop "$DESKTOP_FILE" 644 || die "could not install $DESKTOP_FILE"
+sed "s|##exec##|$(sed_escape "$(dbus_exec_line)")|" "$SERVICE_NAME.service" | write_file "$DBUS_SERVICE_FILE" 644 \
+	|| die "could not install $DBUS_SERVICE_FILE"
+info "installed the krunner plugin and its D-Bus activation file"
 
-# make the session bus pick up the new service file
-if command -v busctl >/dev/null 2>&1; then
-	busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig >/dev/null 2>&1
-elif command -v dbus-send >/dev/null 2>&1; then
-	dbus-send --session --type=method_call --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.ReloadConfig >/dev/null 2>&1
-fi
+# activate: let the bus know the activation file first, then stop a still running (old) instance,
+# the next search starts the new one; stopping earlier would allow a search in between to start the old one again
+reload_session_bus
+stop_running_instance
+reload_krunner_plugins
 
-# make krunner reload its plugin list, no restart required
-if command -v busctl >/dev/null 2>&1 && \
-	busctl --user emit /krunnerrc org.kde.kconfig.notify ConfigChanged 'a{saay}' 1 Plugins 0 >/dev/null 2>&1; then
-	:
-else
-	# fallback: restart krunner
-	if command -v kquitapp6 >/dev/null 2>&1; then
-		kquitapp6 krunner >/dev/null 2>&1 || pkill -x krunner
-	elif command -v kquitapp5 >/dev/null 2>&1; then
-		kquitapp5 krunner >/dev/null 2>&1 || pkill -x krunner
-	else
-		pkill -x krunner
-	fi
-	sleep 1
-	if command -v kstart6 >/dev/null 2>&1; then
-		kstart6 krunner >/dev/null 2>&1
-	elif command -v kstart5 >/dev/null 2>&1; then
-		kstart5 krunner >/dev/null 2>&1
-	else
-		nohup krunner >/dev/null 2>&1 &
-	fi
-fi
+info "done, krunner-keepassxc gets started automatically on the first search"

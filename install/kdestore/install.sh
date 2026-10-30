@@ -35,3 +35,4 @@ reload_krunner_plugins
 check_wl_clipboard
 
 info "done, krunner-keepassxc gets started automatically on the first search"
+info "settings: ${XDG_CONFIG_HOME:-$HOME/.config}/krunner-keepassxc/config (created on the first search, changes apply right away)"

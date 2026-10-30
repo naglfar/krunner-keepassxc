@@ -44,7 +44,7 @@ On first start the plugin will create a config file with default values in `~/.c
 
 > :warning: **The clipboard gets emptied `clipboard_clear_delay` seconds (default: 10) after copying a value, regardless of what it contains by then.** If you copy something else in the meantime, that gets cleared as well. Set `clipboard_clear_delay = 0` to disable this. Copying another value restarts the timer. When the value was copied through Klipper's D-Bus interface (no `wl-copy` >= 2.3.0 available), the clipboard is overwritten with a single space instead of being emptied, because Klipper restores its newest history entry (the copied value) as soon as the clipboard is empty; the value itself stays in Klipper's history.
 
-The config file gets read on startup. To apply changes just stop the running service with `pkill -f "krunner-keepassxc run"`, it will be started again with the new config on the next krunner query.
+Changes to the config file apply automatically on the next search, no restart needed. If the file can't be read (e.g. a syntax error), the previous settings stay in effect and a warning is logged (`journalctl --user -f`). Removing an option from the file resets it to its default, the option is added to the file again.
 
 ### Auto-type
 With `autotype = true` the values are typed into the window that had the focus before krunner opened.

@@ -8,6 +8,7 @@ from dbus_fast.aio import MessageBus
 from dbus_fast.annotations import Annotated, DBusSignature, DBusStr, DBusVariant
 from dbus_fast.service import ServiceInterface, dbus_method
 
+from . import config as config_module
 from .autotype import Autotype, AutotypeError
 from .autotype import is_available as autotype_available
 from .clipboard import Clipboard
@@ -41,16 +42,27 @@ class KeepassRunner(ServiceInterface):
 		self.cp = Clipboard(bus)
 		self.last_match = 0
 
+		self._tasks: set[asyncio.Task] = set()
+		self._clear_task: asyncio.Task | None = None
+		self._apply_config()
+
+	def _apply_config(self) -> None:
+		"""(re)evaluate the settings that are not read on each use"""
 		self.autotype: Autotype | None = None
 		if str(self.config.get('autotype', 'false')).lower() == 'true':
 			if autotype_available():
 				self.autotype = Autotype(self.app_name, delay=int(self.config.get('autotype_delay', 300)) / 1000)
 			else:
 				print('autotype enabled but not available (needs libei on Wayland or libXtst on X11), using the clipboard', flush=True)
-		self._tasks: set[asyncio.Task] = set()
-		self._clear_task: asyncio.Task | None = None
 		# heading of the result group in krunner, overrides the Name of the .desktop file
 		self.category = 'KeePassXC: auto-type' if self.autotype else 'KeePassXC: copy to clipboard'
+
+	def _reload_config(self) -> None:
+		# only for the settings of the config file, not for a config passed in directly (tests)
+		if self.config is config_module.config and config_module.reload_if_changed():
+			self._apply_config()
+			# e.g. totp_as_extra_entry changes the entries, fetch them again on the next search
+			self.kp.mark_stale()
 
 	@property
 	def busy(self) -> bool:
@@ -60,6 +72,7 @@ class KeepassRunner(ServiceInterface):
 	def _touch(self) -> None:
 		if self.on_activity:
 			self.on_activity()
+		self._reload_config()
 
 	async def copy_to_clipboard(self, string: str) -> None:
 		if string:
@@ -254,13 +267,17 @@ class Runner:
 	request simply activates it again. ``run --idle-timeout 0`` keeps it running.
 	"""
 
-	def __init__(self, config: Config) -> None:
+	def __init__(self, config: Config, idle_timeout: int | None = None) -> None:
 		self.config = config
+		# overrides idle_timeout of the config (command line), also when the config file is reloaded
+		self.idle_timeout_override = idle_timeout
 		self._idle_handle: asyncio.TimerHandle | None = None
 		self._stop: asyncio.Event | None = None
 		self._runner: KeepassRunner | None = None
 
 	def _idle_timeout(self) -> int:
+		if self.idle_timeout_override is not None:
+			return max(0, self.idle_timeout_override)
 		try:
 			return max(0, int(self.config.get('idle_timeout', 0)))
 		except (TypeError, ValueError):

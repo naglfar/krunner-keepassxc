@@ -30,9 +30,7 @@ async def main() -> None:
 		# the service is started on demand by the D-Bus daemon (see
 		# install/de.naglfar.krunner-keepassxc.service), so it inherits the
 		# session's activation environment and no startup workarounds are needed
-		if args.idle_timeout is not None:
-			config['idle_timeout'] = args.idle_timeout
-		runner = Runner(config)
+		runner = Runner(config, idle_timeout=args.idle_timeout)
 		try:
 			await runner.run()
 		except asyncio.exceptions.CancelledError:

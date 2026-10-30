@@ -1,11 +1,17 @@
 import asyncio
 import contextlib
+import importlib
 import io
+import os
+import tempfile
 import unittest
+from pathlib import Path
 from typing import Any, cast
+from unittest import mock
 
 from dbus_fast.aio import MessageBus
 
+import krunner_keepassxc.config
 from krunner_keepassxc.autotype import AutotypeError
 from krunner_keepassxc.runner import KeepassRunner
 from krunner_keepassxc.types import Config, Entry
@@ -39,6 +45,9 @@ class FakeKeepass:
 
 	def open_keepass(self) -> None:
 		self.opened = True
+
+	def mark_stale(self) -> None:
+		self.stale = True
 
 	def _attribute(self, path: str, name: str) -> str:
 		return next(e['attributes'].get(name, '') for e in self.entries if e['path'] == path)
@@ -205,6 +214,27 @@ class RunTests(unittest.IsolatedAsyncioTestCase):
 		await asyncio.sleep(1.1)
 		self.assertEqual(self.clipboard.copied, ['secret of Mail', '<cleared>'])
 		self.assertFalse(self.runner.busy)
+
+
+class ConfigReloadTests(unittest.IsolatedAsyncioTestCase):
+
+	async def test_config_file_changes_apply_on_the_next_request(self) -> None:
+		with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {'XDG_CONFIG_HOME': tmp}):
+			module = importlib.reload(krunner_keepassxc.config)
+			config = module.read_config()
+			runner = KeepassRunner(config, cast(MessageBus, object()))
+			runner.kp = cast(Any, FakeKeepass([entry('Git 1'), entry('Git 2'), entry('Git 3')]))
+			runner.cp = cast(Any, FakeClipboard())
+			self.assertEqual(len(await match(runner, 'git')), 3)
+
+			file = Path(tmp) / 'krunner-keepassxc' / 'config'
+			file.write_text(file.read_text().replace('max_entries = 5', 'max_entries = 1'))
+			stat = file.stat()
+			os.utime(file, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+
+			with contextlib.redirect_stdout(io.StringIO()):
+				self.assertEqual(len(await match(runner, 'git')), 1)
+			self.assertTrue(getattr(runner.kp, 'stale', False))
 
 
 if __name__ == '__main__':

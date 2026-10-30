@@ -1,5 +1,7 @@
 import configparser
+import contextlib
 import importlib
+import io
 import os
 import tempfile
 import unittest
@@ -69,6 +71,67 @@ class ConfigTests(unittest.TestCase):
 		self.module.read_config()
 		self.assertTrue(self.file.read_text(encoding='utf-8').startswith('[DEFAULT]\n'))
 		self.assertEqual(set(self.parse()), set(self.module.config))
+
+	def touch(self) -> None:
+		"""make sure the modification time differs, some file systems are coarse"""
+		stat = self.file.stat()
+		os.utime(self.file, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+
+	def reload(self) -> bool:
+		with contextlib.redirect_stdout(io.StringIO()):
+			return self.module.reload_if_changed()
+
+	def test_reload_only_after_a_change(self) -> None:
+		self.assertFalse(self.module.reload_if_changed())  # nothing read yet
+		self.module.read_config()
+		self.assertFalse(self.reload())
+		self.file.write_text(self.file.read_text().replace('max_entries = 5', 'max_entries = 9'))
+		self.touch()
+		self.assertTrue(self.reload())
+		self.assertEqual(self.module.config['max_entries'], 9)
+		self.assertFalse(self.reload())
+
+	def test_reload_updates_the_dict_in_place(self) -> None:
+		config = self.module.read_config()
+		self.file.write_text(self.file.read_text().replace('trigger = \n', 'trigger = kp\n'))
+		self.touch()
+		self.reload()
+		self.assertIs(config, self.module.config)
+		self.assertEqual(config['trigger'], 'kp ')
+
+	def test_removed_option_falls_back_to_the_default(self) -> None:
+		self.write('[DEFAULT]\nmax_entries = 9\n')
+		self.assertEqual(self.module.read_config()['max_entries'], 9)
+		self.file.write_text(self.file.read_text().replace('max_entries = 9\n', ''))
+		self.touch()
+		self.reload()
+		self.assertEqual(self.module.config['max_entries'], 5)
+		self.assertIn('max_entries = 5', self.file.read_text())  # added again
+
+	def test_invalid_file_keeps_the_previous_settings(self) -> None:
+		self.write('[DEFAULT]\nmax_entries = 9\n')
+		self.module.read_config()
+		content = self.file.read_text()
+		self.file.write_text('this is not an ini file\n')
+		self.touch()
+		output = io.StringIO()
+		with contextlib.redirect_stdout(output):
+			self.assertFalse(self.module.reload_if_changed())
+			self.assertFalse(self.module.reload_if_changed())   # reported once, not on every search
+		self.assertEqual(output.getvalue().count('ignoring the invalid config file'), 1)
+		self.assertEqual(self.module.config['max_entries'], 9)
+		self.assertEqual(self.file.read_text(), 'this is not an ini file\n')  # not touched
+		self.file.write_text(content.replace('max_entries = 9', 'max_entries = 3'))
+		self.touch()
+		self.assertTrue(self.reload())
+		self.assertEqual(self.module.config['max_entries'], 3)
+
+	def test_deleted_file_keeps_the_current_settings(self) -> None:
+		self.write('[DEFAULT]\nmax_entries = 9\n')
+		self.module.read_config()
+		self.file.unlink()
+		self.assertFalse(self.reload())
+		self.assertEqual(self.module.config['max_entries'], 9)
 
 	def test_invalid_number_keeps_the_default(self) -> None:
 		self.write('[DEFAULT]\nmax_entries = many\nidle_timeout = 0\n')

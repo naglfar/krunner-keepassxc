@@ -137,6 +137,10 @@ class KeepassPasswords:
 		await self.update_properties()
 		return self._entries
 
+	def mark_stale(self) -> None:
+		"""fetch the entries again on the next use, the cached ones are used meanwhile"""
+		self.last_check = None
+
 	@property
 	def otp(self) -> bool:
 		return self._otp

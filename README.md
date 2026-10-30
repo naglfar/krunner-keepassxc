@@ -68,7 +68,7 @@ This is a python application communicating with krunner through D-Bus. It is sta
 ## more manual ways of getting started ##
 
 ### start using built Niutka binary ###
-Just download [krunner-keepassxc](https://github.com/naglfar/krunner-keepassxc/releases/download/2.1.0/krunner-keepassxc) and you're good to go!
+Just download [krunner-keepassxc](https://github.com/naglfar/krunner-keepassxc/releases/latest/download/krunner-keepassxc) and you're good to go!
 This is a fully self-contained binary with all dependencies (see [github.com/nuitka/nuitka](https://github.com/nuitka/nuitka))
 ```
 $ ./krunner-keepassxc
@@ -77,7 +77,7 @@ $ ./krunner-keepassxc
 ### start using pip ###
 this will pull the files and dependencies (dbus-fast, cryptography, …) into your global python installation
 ```
-$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/2.1.0/krunner_-_keepassxc-2.1.0-py3-none-any.whl
+$ sudo pip3 install https://github.com/naglfar/krunner-keepassxc/releases/download/2.1.1/krunner_-_keepassxc-2.1.1-py3-none-any.whl
 # see if it works:
 $ python3 -m krunner_keepassxc -l  # should list all the password labels in your database
 $ python3 -m krunner_keepassxc run  # will start the dbus service for communicating with krunner

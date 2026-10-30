@@ -1,18 +1,15 @@
 [project]
 name = "krunner-keepassxc"
-version = "2.1.0"
+version = "2.1.1"
 description = ""
 authors = [{ name = "naglfar", email = "stefan@mtztech.info" }]
 requires-python = ">=3.14,<4"
 dependencies = [
     "cryptography>=43.0.3",
-    "setproctitle>=1.3.3",
     "xdg>=6.0.0",
     "pyotp>=2.9.0",
     "dbus-fast>=2.24.4",
     "python-libei>=0.8.0",
-    "ruff>=0.16.10",
-    "nuitka>=4.2.2",
 ]
 
 [project.scripts]
@@ -29,6 +26,8 @@ dev = [
     "pylint>=2.17.7",
     "rope>=1.8.0",
     "bandit>=1.7.5",
+    "ruff>=0.16.10",
+    "nuitka>=4.2.2",
 ]
 
 [tool.uv]
@@ -48,10 +47,13 @@ nuitka = """cd src && uv run python -m nuitka \
         --output-dir=../dist \
         --output-filename="krunner-keepassxc" \
         --mode=onefile \
+        --include-distribution-metadata=krunner-keepassxc \
         --python-flag=-m \
         krunner_keepassxc
     """
-store = """tar czf dist/krunner-keepassxc-store-2.1.0.tar.gz --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc"""
+store = """version=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])') \
+		&& tar czf "dist/krunner-keepassxc-store-$version.tar.gz" --xform s:^.*/:: install/kdestore/* dist/krunner-keepassxc"""
+version = "python scripts/set_version.py"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

@@ -4,13 +4,12 @@ import asyncio
 from krunner_keepassxc.keepass import KeepassPasswords
 from krunner_keepassxc.runner import Runner
 
+from . import __version__
 from .config import config, read_config
 from .search import search
 
 
 async def main() -> None:
-
-	read_config()
 
 	parser = argparse.ArgumentParser(prog="krunner-keepassxc", description="krunner plugin for querying KeepassXC, includes a small cli for querying manually.")
 	subparsers = parser.add_subparsers(dest="command")
@@ -22,8 +21,12 @@ async def main() -> None:
 	parser.add_argument("-t", "--totp", help="get the TOTP for entries looked up by label", dest="totp", metavar=("label",))
 	parser.add_argument("-p", "--password", help="get the password for entries looked up by label", dest="password", metavar=("label",))
 	parser.add_argument("-s", "--search", help="Search for entries", dest="search", metavar=("query",))
+	parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {__version__}")
 
 	args = parser.parse_args()
+
+	# after parsing: --version and --help must not create the config file
+	read_config()
 
 	if args.command == "run":
 

@@ -8,7 +8,8 @@ Config = TypedDict('Config', {
 	"idle_timeout": int,
 	"autotype": str,
 	"autotype_delay": int,
-	"clipboard_clear_delay": int
+	"clipboard_clear_delay": int,
+	"feedback": str
 })
 
 Entry = TypedDict('Entry', {

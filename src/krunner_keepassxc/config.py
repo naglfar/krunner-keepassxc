@@ -26,7 +26,8 @@ DEFAULTS: Config = {
 	"idle_timeout": 600,
 	"autotype": "False",
 	"autotype_delay": 300,
-	"clipboard_clear_delay": 10
+	"clipboard_clear_delay": 10,
+	"feedback": "info"
 }
 # the current settings, updated in place by read_config()
 config: Config = cast(Config, dict(DEFAULTS))
@@ -39,7 +40,8 @@ config_comments = {
 	"idle_timeout": "seconds without krunner requests after which the service exits, it gets restarted on demand via D-Bus activation (0 = never exit, default: 600)",
 	"autotype": "type the values into the focused window instead of copying them to the clipboard, needs libei on Wayland or libXtst on X11 (true / false)",
 	"autotype_delay": "milliseconds to wait before typing so krunner can close and the previous window regains focus (default: 300)",
-	"clipboard_clear_delay": "seconds after which the clipboard is emptied after copying a value, regardless of what it contains by then (0 = never, default: 10)"
+	"clipboard_clear_delay": "seconds after which the clipboard is emptied after copying a value, regardless of what it contains by then (0 = never, default: 10)",
+	"feedback": "short on-screen messages: info = after copying and on errors (default), error = only when something didn't work (e.g. auto-type wasn't possible and the value was copied instead), none = never"
 }
 
 

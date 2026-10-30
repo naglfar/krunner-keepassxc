@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import Any, cast
 from unittest import mock
 
+from dbus_fast import Message, MessageFlag
 from dbus_fast.aio import MessageBus
 
 import krunner_keepassxc.config
 from krunner_keepassxc.autotype import AutotypeError
+from krunner_keepassxc.osd import show_osd
 from krunner_keepassxc.runner import KeepassRunner
 from krunner_keepassxc.types import Config, Entry
 
@@ -94,7 +96,7 @@ class FakeAutotype:
 def make_runner(entries: list[Entry] | None = None, installed: bool = True, can_clip: bool = True,
 		**config: object) -> KeepassRunner:
 	settings = {'trigger': '', 'max_entries': 5, 'icon': 'object-unlocked', 'autotype': 'false',
-		'totp_as_extra_entry': 'True', 'clipboard_clear_delay': 0, **config}
+		'totp_as_extra_entry': 'True', 'clipboard_clear_delay': 0, 'feedback': 'none', **config}
 	runner = KeepassRunner(cast(Config, settings), cast(MessageBus, object()))
 	runner.kp = cast(Any, FakeKeepass(entries or [], installed))
 	runner.cp = cast(Any, FakeClipboard(can_clip))
@@ -216,6 +218,106 @@ class RunTests(unittest.IsolatedAsyncioTestCase):
 		self.assertFalse(self.runner.busy)
 
 
+class FeedbackTests(unittest.IsolatedAsyncioTestCase):
+
+	async def asyncSetUp(self) -> None:
+		self.entries = [entry('Mail', user='stefan', otp=True)]
+		self.runner = make_runner(self.entries, feedback='info', clipboard_clear_delay=10)
+		patcher = mock.patch('krunner_keepassxc.runner.show_osd', new_callable=mock.AsyncMock)
+		self.osd = patcher.start()
+		self.addCleanup(patcher.stop)
+
+	def texts(self) -> list[tuple[str, str]]:
+		return [(c.args[1], c.args[2]) for c in self.osd.await_args_list]
+
+	async def asyncTearDown(self) -> None:
+		for task in list(self.runner._tasks):
+			task.cancel()
+
+	async def test_copied(self) -> None:
+		await run(self.runner, self.entries[0]['path'], '')
+		await run(self.runner, self.entries[0]['path'], 'user')
+		await run(self.runner, self.entries[0]['path'], 'totp')
+		self.assertEqual(self.texts(), [
+			('Password copied, cleared in 10 s', 'edit-copy'),
+			('User name copied, cleared in 10 s', 'edit-copy'),
+			('TOTP copied, cleared in 10 s', 'edit-copy'),
+		])
+
+	async def test_without_clearing(self) -> None:
+		self.runner.config['clipboard_clear_delay'] = 0
+		await run(self.runner, self.entries[0]['path'], '')
+		self.assertEqual(self.texts(), [('Password copied', 'edit-copy')])
+
+	async def test_autotype(self) -> None:
+		self.runner.autotype = cast(Any, FakeAutotype())
+		await run(self.runner, self.entries[0]['path'], '')
+		await asyncio.gather(*[t for t in self.runner._tasks if t is not self.runner._clear_task])
+		self.assertEqual(self.texts(), [])  # typing is the feedback
+
+		self.runner.autotype = cast(Any, FakeAutotype(fail=True))
+		with contextlib.redirect_stdout(io.StringIO()):
+			await run(self.runner, self.entries[0]['path'], 'user')
+			await asyncio.gather(*[t for t in self.runner._tasks if t is not self.runner._clear_task])
+		self.assertEqual(self.texts(), [('Auto-type not possible, user name copied instead, cleared in 10 s', 'dialog-warning')])
+
+	async def test_no_clipboard(self) -> None:
+		async def fail(text: str, primary: bool = False) -> None:
+			raise NotImplementedError
+		cast(Any, self.runner.cp).copy = fail
+		with contextlib.redirect_stdout(io.StringIO()):
+			await run(self.runner, self.entries[0]['path'], '')
+		self.assertEqual(self.texts(), [('Could not copy the password, no clipboard available', 'dialog-warning')])
+
+	async def test_errors_only(self) -> None:
+		self.runner.config['feedback'] = 'error'
+		await run(self.runner, self.entries[0]['path'], '')
+		self.osd.assert_not_awaited()
+		self.runner.autotype = cast(Any, FakeAutotype(fail=True))
+		with contextlib.redirect_stdout(io.StringIO()):
+			await run(self.runner, self.entries[0]['path'], '')
+			await asyncio.gather(*[t for t in self.runner._tasks if t is not self.runner._clear_task])
+		self.assertEqual(self.texts(), [('Auto-type not possible, password copied instead, cleared in 10 s', 'dialog-warning')])
+
+	async def test_none(self) -> None:
+		self.runner.config['feedback'] = 'none'
+		self.runner.autotype = cast(Any, FakeAutotype(fail=True))
+		with contextlib.redirect_stdout(io.StringIO()):
+			await run(self.runner, self.entries[0]['path'], '')
+			await asyncio.gather(*[t for t in self.runner._tasks if t is not self.runner._clear_task])
+		self.osd.assert_not_awaited()
+
+	async def test_case_and_unknown_values(self) -> None:
+		for value, shown in (('INFO', True), ('whatever', True), ('NONE', False), ('Error', False)):
+			with self.subTest(value=value):
+				self.osd.reset_mock()
+				self.runner.config['feedback'] = value
+				await run(self.runner, self.entries[0]['path'], '')  # copied: an info, no error
+				self.assertEqual(self.osd.await_count, 1 if shown else 0)
+
+
+class OsdMessageTests(unittest.IsolatedAsyncioTestCase):
+
+	async def test_message_to_plasmashell(self) -> None:
+		sent: list[Message] = []
+
+		class FakeBus:
+			async def send(self, message: Message) -> None:
+				sent.append(message)
+
+		await show_osd(cast(MessageBus, FakeBus()), 'Password copied', 'edit-copy')
+		message = sent[0]
+		self.assertEqual((message.destination, message.path, message.interface, message.member),
+			('org.kde.plasmashell', '/org/kde/osdService', 'org.kde.osdService', 'showText'))
+		self.assertEqual((message.signature, message.body), ('ss', ['edit-copy', 'Password copied']))
+		self.assertIn(MessageFlag.NO_REPLY_EXPECTED, message.flags)
+
+	async def test_errors_are_only_logged(self) -> None:
+		with contextlib.redirect_stdout(io.StringIO()) as output:
+			await show_osd(cast(MessageBus, object()), 'x', 'y')
+		self.assertIn('could not show the OSD', output.getvalue())
+
+
 class ConfigReloadTests(unittest.IsolatedAsyncioTestCase):
 
 	async def test_config_file_changes_apply_on_the_next_request(self) -> None:
@@ -232,9 +334,24 @@ class ConfigReloadTests(unittest.IsolatedAsyncioTestCase):
 			stat = file.stat()
 			os.utime(file, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
 
-			with contextlib.redirect_stdout(io.StringIO()):
+			with contextlib.redirect_stdout(io.StringIO()), \
+					mock.patch('krunner_keepassxc.runner.show_osd', new_callable=mock.AsyncMock) as osd:
 				self.assertEqual(len(await match(runner, 'git')), 1)
+				await asyncio.gather(*runner._tasks)
 			self.assertTrue(getattr(runner.kp, 'stale', False))
+			osd.assert_awaited_once_with(runner.bus, 'KeePassXC search: settings reloaded', 'configure')
+
+			# no message with feedback = error, and none when nothing changed
+			file.write_text(file.read_text().replace('feedback = info', 'feedback = error'))
+			stat = file.stat()
+			os.utime(file, ns=(stat.st_atime_ns, stat.st_mtime_ns + 2_000_000_000))
+			with contextlib.redirect_stdout(io.StringIO()), \
+					mock.patch('krunner_keepassxc.runner.show_osd', new_callable=mock.AsyncMock) as osd:
+				await match(runner, 'git')
+				await match(runner, 'git')
+				await asyncio.gather(*runner._tasks)
+			self.assertEqual(config['feedback'], 'error')
+			osd.assert_not_awaited()
 
 
 if __name__ == '__main__':

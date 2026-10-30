@@ -13,6 +13,7 @@ from .autotype import Autotype, AutotypeError
 from .autotype import is_available as autotype_available
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
+from .osd import show_osd
 from .search import match_hint, search
 from .types import Config
 
@@ -37,6 +38,7 @@ class KeepassRunner(ServiceInterface):
 		# callback invoked on every incoming krunner call (used for the idle timeout)
 		self.on_activity = on_activity
 
+		self.bus = bus
 		self.kp = KeepassPasswords(self.config, bus)
 		# shares the bus connection, the backend is picked on first use
 		self.cp = Clipboard(bus)
@@ -63,6 +65,10 @@ class KeepassRunner(ServiceInterface):
 			self._apply_config()
 			# e.g. totp_as_extra_entry changes the entries, fetch them again on the next search
 			self.kp.mark_stale()
+			# called synchronously from the krunner calls, don't make them wait for the OSD
+			task = asyncio.create_task(self._feedback('KeePassXC runner: settings changed', icon='configure'))
+			self._tasks.add(task)
+			task.add_done_callback(self._tasks.discard)
 
 	@property
 	def busy(self) -> bool:
@@ -74,23 +80,43 @@ class KeepassRunner(ServiceInterface):
 			self.on_activity()
 		self._reload_config()
 
-	async def copy_to_clipboard(self, string: str) -> None:
-		if string:
-			try:
-				await self.cp.copy(string)
-			except NotImplementedError:
-				print('no clipboard available (klipper not running, wl-copy >= 2.3.0 not installed)', flush=True)
-				return
-			except Exception as e:  # noqa: BLE001 - klipper (D-Bus) and wl-copy fail differently, never break the krunner call
-				print(str(e), flush=True)
-				return
-			self._schedule_clipboard_clear()
+	async def _feedback(self, text: str, error: bool = False, icon: str | None = None) -> None:
+		level = str(self.config.get('feedback', 'info')).strip().lower()
+		if level == 'none' or (level == 'error' and not error):
+			return
+		await show_osd(self.bus, text, icon or ('dialog-warning' if error else 'edit-copy'))
+
+	async def copy_to_clipboard(self, string: str, what: str = 'password', autotype_failed: bool = False) -> None:
+		"""what: password, user name or TOTP, for the feedback"""
+		if not string:
+			return
+		label = what[0].upper() + what[1:]
+		try:
+			await self.cp.copy(string)
+		except NotImplementedError:
+			print('no clipboard available (klipper not running, wl-copy >= 2.3.0 not installed)', flush=True)
+			await self._feedback(f'Could not copy the {what}, no clipboard available', error=True)
+			return
+		except Exception as e:  # noqa: BLE001 - klipper (D-Bus) and wl-copy fail differently, never break the krunner call
+			print(str(e), flush=True)
+			await self._feedback(f'Could not copy the {what}', error=True)
+			return
+		self._schedule_clipboard_clear()
+		delay = self._clipboard_clear_delay()
+		cleared = f', cleared in {delay} s' if delay > 0 else ''
+		if autotype_failed:
+			await self._feedback(f'Auto-type not possible, {what} copied instead{cleared}', error=True)
+		else:
+			await self._feedback(f'{label} copied{cleared}')
+
+	def _clipboard_clear_delay(self) -> int:
+		try:
+			return int(self.config.get('clipboard_clear_delay', 10))
+		except (TypeError, ValueError):
+			return 10
 
 	def _schedule_clipboard_clear(self) -> None:
-		try:
-			delay = int(self.config.get('clipboard_clear_delay', 10))
-		except (TypeError, ValueError):
-			delay = 10
+		delay = self._clipboard_clear_delay()
 		if delay <= 0:
 			return
 		# the delay always counts from the latest copy
@@ -110,27 +136,27 @@ class KeepassRunner(ServiceInterface):
 		except Exception as e:  # noqa: BLE001 - only log, there is nobody to report to
 			print(f'could not clear the clipboard: {e!r}', flush=True)
 
-	async def output(self, string: str) -> None:
+	async def output(self, string: str, what: str = 'password') -> None:
 		"""auto-type the value if enabled, otherwise copy it to the clipboard"""
 		if not string:
 			return
 		if self.autotype is None:
-			await self.copy_to_clipboard(string)
+			await self.copy_to_clipboard(string, what)
 			return
 		# don't block the D-Bus reply, krunner has to close before we can type
-		task = asyncio.create_task(self._autotype(self.autotype, string))
+		task = asyncio.create_task(self._autotype(self.autotype, string, what))
 		self._tasks.add(task)
 		task.add_done_callback(self._tasks.discard)
 
-	async def _autotype(self, autotype: Autotype, string: str) -> None:
+	async def _autotype(self, autotype: Autotype, string: str, what: str = 'password') -> None:
 		try:
 			await autotype.type(string)
 		except (AutotypeError, OSError) as e:
 			print(f'autotype failed, copying to clipboard instead: {e}', flush=True)
-			await self.copy_to_clipboard(string)
+			await self.copy_to_clipboard(string, what, autotype_failed=True)
 		except Exception as e:  # noqa: BLE001 - never lose the value because of a libei/portal issue
 			print(f'autotype failed unexpectedly, copying to clipboard instead: {e!r}', flush=True)
-			await self.copy_to_clipboard(string)
+			await self.copy_to_clipboard(string, what, autotype_failed=True)
 
 	@dbus_method()
 	async def Actions(self) -> Annotated[
@@ -238,14 +264,14 @@ class KeepassRunner(ServiceInterface):
 
 			if action_id == 'user':
 				user = await self.kp.get_username(match_id)
-				await self.output(user)
+				await self.output(user, 'user name')
 			elif action_id == 'totp':
 				totp = await self.kp.get_totp(match_id)
 				if totp:
-					await self.output(totp)
+					await self.output(totp, 'TOTP')
 			else:
 				secret = await self.kp.get_secret(match_id)
-				await self.output(secret)
+				await self.output(secret, 'password')
 
 			# clear last_match to skip needless check_cache
 			self.last_match = 0

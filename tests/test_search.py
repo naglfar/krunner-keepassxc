@@ -42,17 +42,46 @@ class SearchTests(unittest.TestCase):
 
 	def test_ranking(self) -> None:
 		entries = [
-			entry('Zulu', path='Root/git/Zulu'),           # query only in the path
-			entry('My GitHub', path='Root/My GitHub'),     # query inside the label
-			entry('GitLab', path='Root/GitLab'),           # label starts with the query
-			entry('Gitea', path='Root/Gitea'),             # label starts with the query
-			entry('Alpha', path='Root/git/Alpha'),         # query only in the path
+			entry('Zulu', path='Root/git/Zulu'),                      # only in the path (group)
+			entry('Digital Ocean', path='Root/Digital Ocean'),        # inside a word of the title
+			entry('Code', url='https://www.github.com/login'),        # start of the URL's host name
+			entry('My GitHub', path='Root/My GitHub'),                # start of a word of the title
+			entry('MyGitea', path='Root/MyGitea'),                    # start of a camel case word
+			entry('GitLab', path='Root/GitLab'),                      # title starts with the query
+			entry('gitea', path='Root/gitea'),                        # title starts with the query
+			entry('Git', path='Root/Git'),                            # exact title
+			entry('Alpha', path='Root/git/Alpha'),                    # only in the path (group)
 		]
-		self.assertEqual(labels(search(entries, 'git')), ['GitLab', 'Gitea', 'My GitHub', 'Alpha', 'Zulu'])
+		self.assertEqual(labels(search(entries, 'git')), [
+			'Git',
+			'gitea', 'GitLab',             # alphabetical, case insensitive
+			'My GitHub', 'MyGitea',
+			'Code',
+			'Digital Ocean',
+			'Alpha', 'Zulu',
+		])
+
+	def test_ranking_with_several_words(self) -> None:
+		entries = [
+			entry('Mail', path='Root/Work/Mail'),                     # "work" only in the group
+			entry('Work Mail Archive', path='Root/Work Mail Archive'),  # title starts with the query
+			entry('Mail for Work', path='Root/Mail for Work'),        # both words start words of the title
+			entry('Homework Mailbox', path='Root/Homework Mailbox'),  # both words inside the title
+		]
+		self.assertEqual(labels(search(entries, 'work mail')),
+			['Work Mail Archive', 'Mail for Work', 'Homework Mailbox', 'Mail'])
+
+	def test_host_name_variants(self) -> None:
+		entries = [
+			entry('A', url='mail.google.com/inbox'),                  # without scheme
+			entry('B', url='https://www.example.org', path='Root/B mail'),  # only in the path
+		]
+		self.assertEqual(labels(search(entries, 'mail')), ['A', 'B'])
+		self.assertEqual(labels(search(entries, 'google')), ['A'])
 
 	def test_empty_query_returns_everything_sorted(self) -> None:
-		entries = [entry('b'), entry('a')]
-		self.assertEqual(labels(search(entries, '')), ['a', 'b'])
+		entries = [entry('b'), entry('A')]
+		self.assertEqual(labels(search(entries, '')), ['A', 'b'])
 
 	def test_missing_attributes_dont_break_the_search(self) -> None:
 		broken = cast(Entry, {'label': 'No URL', 'path': '/x', 'attributes': {'Path': 'Root/No URL'}})

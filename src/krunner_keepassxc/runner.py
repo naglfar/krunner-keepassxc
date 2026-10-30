@@ -189,7 +189,8 @@ class KeepassRunner(ServiceInterface):
 						entry["label"],
 						self.config['icon'],
 						100,
-						1 - (i * 0.1),
+						# keeps the order of search(), always within (0, 1]
+						1 - i / (len(entries) + 1),
 						{
 							'subtext': Variant('s', await self.kp.get_username(entry["path"]))
 						}

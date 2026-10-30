@@ -118,7 +118,8 @@ class MatchTests(unittest.IsolatedAsyncioTestCase):
 		self.assertEqual(path, entries[1]['path'])
 		self.assertEqual(icon, 'object-unlocked')
 		self.assertEqual(category_relevance, 100)
-		self.assertAlmostEqual(relevance, 0.9)
+		self.assertAlmostEqual(relevance, 0.75)  # second of three results
+		self.assertGreater(matches[-1][4], 0)
 		self.assertEqual(properties['subtext'].value, 'user1')
 		self.assertEqual(properties['category'].value, 'KeePassXC: copy to clipboard')
 

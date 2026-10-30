@@ -12,6 +12,7 @@ from .autotype import Autotype, AutotypeError
 from .autotype import is_available as autotype_available
 from .clipboard import Clipboard
 from .keepass import KeepassPasswords
+from .search import search
 from .types import Config
 
 BUS_NAME = "de.naglfar.krunner-keepassxc"
@@ -179,27 +180,7 @@ class KeepassRunner(ServiceInterface):
 					]
 					self.empty_action = 'open-keepassxc'
 			else:
-				# find entries that contain the query, Path attribute contains keepass group name
-				# TODO: maybe search through additional attributes aswell?
-				entries = [e for e in await self.kp.get_entries() if any([
-					all(x in e["attributes"]["Path"].lower() for x in query.lower().split(' ')),
-					all(x in e["attributes"]["URL"].lower() for x in query.lower().split(' ')),
-					all(x in e["attributes"]["UserName"].lower() for x in query.lower().split(' ')),
-				])]
-
-				# sort entries where the label starts with the query to the top
-				# sort entries containing the query in the label over path next
-				# everything else comes after
-				# [print(e["label"]) for e in entries]
-				entries.sort(key=lambda entry: (
-						not entry["label"].lower().startswith(query.lower()),
-						not query.lower() in entry["label"].lower(),
-						entry["label"]
-					)
-				)
-
-				# max entries
-				entries = entries[:self.config['max_entries']]
+				entries = search(await self.kp.get_entries(), query)[:self.config['max_entries']]
 
 				matches = [
 				#	data, display text, icon, type (Plasma::QueryType), relevance (0-1), properties (subtext, category and urls)

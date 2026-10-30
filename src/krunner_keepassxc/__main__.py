@@ -5,6 +5,7 @@ from krunner_keepassxc.keepass import KeepassPasswords
 from krunner_keepassxc.runner import Runner
 
 from .config import config, read_config
+from .search import search
 
 
 async def main() -> None:
@@ -72,22 +73,7 @@ async def main() -> None:
 				print('Nothing found')
 
 		elif args.search:
-			query = args.search
-
-			entries = [e for e in await kp.get_entries() if any([
-				all(x in e["attributes"]["Path"].lower() for x in query.lower().split(' ')),
-				all(x in e["attributes"]["URL"].lower() for x in query.lower().split(' ')),
-				all(x in e["attributes"]["UserName"].lower() for x in query.lower().split(' ')),
-			])]
-
-			entries.sort(key=lambda entry: (
-					not entry["label"].lower().startswith(query.lower()),
-					not query.lower() in entry["label"].lower(),
-					entry["label"]
-				)
-			)
-
-			for entry in entries:
+			for entry in search(await kp.get_entries(), args.search):
 				print(f'{entry["label"]} ({entry["attributes"]["Path"]})')
 
 		else:

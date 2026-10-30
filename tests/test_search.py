@@ -99,9 +99,45 @@ class SearchTests(unittest.TestCase):
 		self.assertEqual(labels(search(entries, 'mail')), ['A', 'B'])
 		self.assertEqual(labels(search(entries, 'google')), ['A'])
 
+	def test_case_accents_and_umlauts(self) -> None:
+		entries = [entry('Müller'), entry('Café Central'), entry('Straße'), entry('Quintus'), entry('Muller')]
+		for query in ('müller', 'MÜLLER', 'muller', 'mueller', 'mül', 'mue'):
+			with self.subTest(query=query):
+				self.assertIn('Müller', labels(search(entries, query)))
+		self.assertEqual(labels(search(entries, 'cafe')), ['Café Central'])
+		self.assertEqual(labels(search(entries, 'CAFÉ central')), ['Café Central'])
+		self.assertEqual(labels(search(entries, 'strasse')), ['Straße'])
+		self.assertEqual(labels(search(entries, 'straße')), ['Straße'])
+		# "ue" in the query is never read as "ü"
+		self.assertEqual(search(entries, 'que'), [])
+		self.assertEqual(labels(search(entries, 'mueller')), ['Müller'])
+
+	def test_umlauts_in_the_query_find_spelled_out_entries(self) -> None:
+		entries = [entry('Guenther'), entry('Günther'), entry('Gunther'), entry('Guentner')]
+		self.assertEqual(labels(search(entries, 'günther')), ['Guenther', 'Gunther', 'Günther'])
+		self.assertEqual(labels(search(entries, 'GÜNTHER')), ['Guenther', 'Gunther', 'Günther'])
+		# exact title, also spelled out
+		self.assertEqual(labels(search([entry('Günther Bau'), entry('Guenther')], 'günther')), ['Guenther', 'Günther Bau'])
+		# several words, each with its own forms
+		self.assertEqual(labels(search([entry('Müller Bäckerei', path='Root/Mueller Baeckerei')], 'müller bäck')),
+			['Müller Bäckerei'])
+
+	def test_ranking_ignores_umlauts(self) -> None:
+		entries = [
+			entry('Zahnarzt', path='Root/Ärzte/Zahnarzt'),            # only in the group
+			entry('Ärztekammer'),                                    # title starts with the query
+		]
+		self.assertEqual(labels(search(entries, 'arzte')), ['Ärztekammer', 'Zahnarzt'])
+		self.assertEqual(labels(search(entries, 'aerzte')), ['Ärztekammer', 'Zahnarzt'])
+
+	def test_host_names_with_umlauts(self) -> None:
+		entries = [entry('Shop', url='https://www.müller.de/login'), entry('Other', url='https://example.org')]
+		self.assertEqual(labels(search(entries, 'mueller')), ['Shop'])
+
 	def test_empty_query_returns_everything_sorted(self) -> None:
-		entries = [entry('b'), entry('A')]
-		self.assertEqual(labels(search(entries, '')), ['A', 'b'])
+		entries = [entry('b'), entry('Zahnarzt'), entry('Ärztekammer'), entry('A')]
+		# case insensitive, umlauts sorted like their base letter
+		self.assertEqual(labels(search(entries, '')), ['A', 'Ärztekammer', 'b', 'Zahnarzt'])
 
 	def test_missing_attributes_dont_break_the_search(self) -> None:
 		broken = cast(Entry, {'label': 'No URL', 'path': '/x', 'attributes': {'Path': 'Root/No URL'}})

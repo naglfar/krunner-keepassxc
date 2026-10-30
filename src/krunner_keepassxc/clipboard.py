@@ -64,6 +64,7 @@ class Clipboard:
 		self.can_clip = False
 		self._checked = False
 		self._copy = self._clear = None
+		self._backend = ''
 
 	async def check_executables(self) -> None:
 		"""pick the backend, can be called again (e.g. after klipper or wl-copy became available)"""
@@ -71,15 +72,22 @@ class Clipboard:
 		clear: ClearFunc | None = None
 		self.can_clip = False
 
+		backend = ''
+
 		if await self._klipper_available():
 			copy, clear = self._copy_klipper, self._clear_klipper
 			self.can_clip = True
+			backend = 'klipper (copied secrets end up in its history, install wl-clipboard >= 2.3.0 on Wayland to avoid this)'
 
 		if await self._wl_copy_sensitive_supported():
 			copy = self._make_wl_copy(fallback=copy)
 			clear = self._make_wl_clear(fallback=clear)
 			self.can_clip = True
+			backend = 'wl-copy --sensitive (kept out of the clipboard history)' + (', klipper as fallback' if backend else '')
 
+		if backend and backend != self._backend:
+			print(f'clipboard: using {backend}', flush=True)
+		self._backend = backend
 		self._copy, self._clear = copy, clear
 		self._checked = True
 
@@ -120,8 +128,11 @@ class Clipboard:
 		await self._call_klipper('setClipboardContents', 's', [text])
 
 	async def _clear_klipper(self, primary: bool = False) -> None:
-		# clears the current clipboard (and selection), not klipper's history
-		await self._call_klipper('clearClipboardContents')
+		# clearClipboardContents doesn't work: with "prevent empty clipboard" (NoEmptyClipboard in klipperrc,
+		# on by default and not shown in the settings) klipper immediately restores the newest history entry,
+		# which is the value we just copied. An empty string is ignored by setClipboardContents, so the
+		# clipboard is overwritten with a single space instead; the value itself stays in klipper's history.
+		await self._call_klipper('setClipboardContents', 's', [' '])
 
 	# wl-copy
 

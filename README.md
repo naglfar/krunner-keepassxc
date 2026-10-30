@@ -10,7 +10,7 @@ You can install the plugin through the krunner settings dialog or alternatively 
 ### Requirements:
 - Python 3.14 (probably runs with 3.10+)
 - KeepassXC installed and configured for Freedesktop.org Secret Service access (See below)
-- optional, Wayland: `wl-clipboard` >= 2.3.0, copied secrets are then marked as passwords (`wl-copy --sensitive`) and kept out of the Klipper history; without it the plugin falls back to Klipper's D-Bus interface, where they do show up in the history
+- recommended, Wayland: `wl-clipboard` >= 2.3.0, copied secrets are then marked as passwords (`wl-copy --sensitive`) and kept out of the Klipper history. Without it the plugin copies through Klipper's D-Bus interface, then **secrets end up in Klipper's history, which by default is also saved to disk**
 
 ### Enable Secret Service in KeepassXC:
 * Open KeepassXC client
@@ -42,7 +42,7 @@ On first start the plugin will create a config file with default values in `~/.c
 - clipboard_clear_delay (seconds, default: 10): empty the clipboard this many seconds after a value was copied, 0 disables it (see the warning below)
 - idle_timeout (seconds, default: 600): exit the service after this many seconds without a krunner request, it gets started again automatically on the next request. 0 keeps it running once started. For development you can override it on the command line, e.g. `uv run runner --idle-timeout 0`.
 
-> :warning: **The clipboard gets emptied `clipboard_clear_delay` seconds (default: 10) after copying a value, regardless of what it contains by then.** If you copy something else in the meantime, that gets cleared as well. Set `clipboard_clear_delay = 0` to disable this. Copying another value restarts the timer. Clearing only empties the current clipboard: when the value was copied through Klipper's D-Bus interface (no `wl-copy` >= 2.3.0 available), it stays in Klipper's history.
+> :warning: **The clipboard gets emptied `clipboard_clear_delay` seconds (default: 10) after copying a value, regardless of what it contains by then.** If you copy something else in the meantime, that gets cleared as well. Set `clipboard_clear_delay = 0` to disable this. Copying another value restarts the timer. When the value was copied through Klipper's D-Bus interface (no `wl-copy` >= 2.3.0 available), the clipboard is overwritten with a single space instead of being emptied, because Klipper restores its newest history entry (the copied value) as soon as the clipboard is empty; the value itself stays in Klipper's history.
 
 The config file gets read on startup. To apply changes just stop the running service with `pkill -f "krunner-keepassxc run"`, it will be started again with the new config on the next krunner query.
 

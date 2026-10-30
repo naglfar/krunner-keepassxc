@@ -110,6 +110,29 @@ reload_krunner_plugins() {
 	info "restarted krunner, the search in the application launcher picks up the change after the next login"
 }
 
+# Wayland: secrets are only kept out of klipper's clipboard history when copied with
+# wl-copy --sensitive (wl-clipboard >= 2.3.0), otherwise the plugin falls back to klipper
+check_wl_clipboard() {
+	if [ -z "${WAYLAND_DISPLAY:-}" ] && [ "${XDG_SESSION_TYPE:-}" != "wayland" ]; then
+		return 0
+	fi
+	local problem action
+	if ! has wl-copy; then
+		problem="wl-clipboard is not installed"
+		action="install"
+	elif ! wl-copy --help 2>&1 | grep -q -- '--sensitive'; then
+		problem="the installed wl-clipboard is too old, version 2.3.0 or newer is recommended"
+		action="update"
+	else
+		return 0
+	fi
+	info ""
+	info "note: $problem."
+	info "  Please $action it using your package manager (the package is called wl-clipboard)."
+	info "  Without it copied passwords end up in Klipper's clipboard history, which is also saved to disk."
+	info ""
+}
+
 # previous installation methods: systemd user unit or autostart entry
 cleanup_legacy() {
 	if has systemctl && systemctl --user cat krunner-keepassxc.service >/dev/null 2>&1; then

@@ -32,4 +32,6 @@ reload_session_bus
 stop_running_instance
 reload_krunner_plugins
 
+check_wl_clipboard
+
 info "done, krunner-keepassxc gets started automatically on the first search"

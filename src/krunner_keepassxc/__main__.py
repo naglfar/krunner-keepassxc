@@ -82,6 +82,8 @@ async def main() -> None:
 def runner() -> None:
 	import sys
 	sys.argv.insert(1, 'run')
+	sys.argv.insert(2, '--idle-timeout')
+	sys.argv.insert(3, '0')
 	asyncio.run(main())
 
 def cli() -> None:

@@ -11,7 +11,7 @@ calls it on every krunner request, so edits apply without a restart.
 """
 import configparser
 import os
-from typing import cast
+from typing import Literal, cast
 
 from xdg import xdg_config_home
 
@@ -148,17 +148,25 @@ def read_config() -> Config:
 	return config
 
 
-def reload_if_changed() -> bool:
-	"""re-read the config file if it was modified since the last read, True if new settings were applied"""
+def is_valid() -> bool:
+	"""whether the config file could be read the last time"""
+	return _valid
+
+
+def reload_if_changed() -> Literal['unchanged', 'reloaded', 'invalid']:
+	"""
+	Re-read the config file if it was modified since the last read:
+	reloaded = new settings applied, invalid = changed but can't be read (the previous settings stay)
+	"""
 	if _loaded is None:
-		return False
+		return 'unchanged'
 	filename, state = _loaded
 	current = _file_state(filename)
 	if current is None or current == state:
 		# unchanged, or deleted (then keep the current settings)
-		return False
+		return 'unchanged'
 	read_config()
 	if not _valid:
-		return False
+		return 'invalid'
 	print(f'reloaded the config file {filename}', flush=True)
-	return True
+	return 'reloaded'

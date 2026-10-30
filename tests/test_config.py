@@ -78,11 +78,12 @@ class ConfigTests(unittest.TestCase):
 		os.utime(self.file, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
 
 	def reload(self) -> bool:
+		"""True if new settings were applied"""
 		with contextlib.redirect_stdout(io.StringIO()):
-			return self.module.reload_if_changed()
+			return self.module.reload_if_changed() == 'reloaded'
 
 	def test_reload_only_after_a_change(self) -> None:
-		self.assertFalse(self.module.reload_if_changed())  # nothing read yet
+		self.assertEqual(self.module.reload_if_changed(), 'unchanged')  # nothing read yet
 		self.module.read_config()
 		self.assertFalse(self.reload())
 		self.file.write_text(self.file.read_text().replace('max_entries = 5', 'max_entries = 9'))
@@ -116,8 +117,9 @@ class ConfigTests(unittest.TestCase):
 		self.touch()
 		output = io.StringIO()
 		with contextlib.redirect_stdout(output):
-			self.assertFalse(self.module.reload_if_changed())
-			self.assertFalse(self.module.reload_if_changed())   # reported once, not on every search
+			self.assertEqual(self.module.reload_if_changed(), 'invalid')
+			self.assertEqual(self.module.reload_if_changed(), 'unchanged')   # reported once, not on every search
+		self.assertFalse(self.module.is_valid())
 		self.assertEqual(output.getvalue().count('ignoring the invalid config file'), 1)
 		self.assertEqual(self.module.config['max_entries'], 9)
 		self.assertEqual(self.file.read_text(), 'this is not an ini file\n')  # not touched

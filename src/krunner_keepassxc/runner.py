@@ -46,6 +46,8 @@ class KeepassRunner(ServiceInterface):
 
 		self._tasks: set[asyncio.Task] = set()
 		self._clear_task: asyncio.Task | None = None
+		# an invalid config file at startup is reported on the first krunner call
+		self._report_invalid_config = self.config is config_module.config and not config_module.is_valid()
 		self._apply_config()
 
 	def _apply_config(self) -> None:
@@ -61,14 +63,26 @@ class KeepassRunner(ServiceInterface):
 
 	def _reload_config(self) -> None:
 		# only for the settings of the config file, not for a config passed in directly (tests)
-		if self.config is config_module.config and config_module.reload_if_changed():
+		if self.config is not config_module.config:
+			return
+		result = config_module.reload_if_changed()
+		if self._report_invalid_config:
+			# invalid already when the service started
+			self._report_invalid_config = False
+			result = 'invalid'
+		if result == 'reloaded':
 			self._apply_config()
 			# e.g. totp_as_extra_entry changes the entries, fetch them again on the next search
 			self.kp.mark_stale()
-			# called synchronously from the krunner calls, don't make them wait for the OSD
-			task = asyncio.create_task(self._feedback('KeePassXC runner: settings changed', icon='configure'))
-			self._tasks.add(task)
-			task.add_done_callback(self._tasks.discard)
+			self._feedback_soon('KeePassXC runner: settings changed', icon='configure')
+		elif result == 'invalid':
+			self._feedback_soon('KeePassXC runner: invalid settings file, previous settings kept', error=True)
+
+	def _feedback_soon(self, text: str, error: bool = False, icon: str | None = None) -> None:
+		# for the synchronous parts of the krunner calls, they don't wait for the OSD
+		task = asyncio.create_task(self._feedback(text, error, icon))
+		self._tasks.add(task)
+		task.add_done_callback(self._tasks.discard)
 
 	@property
 	def busy(self) -> bool:

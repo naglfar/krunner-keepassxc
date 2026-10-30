@@ -339,7 +339,7 @@ class ConfigReloadTests(unittest.IsolatedAsyncioTestCase):
 				self.assertEqual(len(await match(runner, 'git')), 1)
 				await asyncio.gather(*runner._tasks)
 			self.assertTrue(getattr(runner.kp, 'stale', False))
-			osd.assert_awaited_once_with(runner.bus, 'KeePassXC search: settings reloaded', 'configure')
+			osd.assert_awaited_once_with(runner.bus, 'KeePassXC runner: settings changed', 'configure')
 
 			# no message with feedback = error, and none when nothing changed
 			file.write_text(file.read_text().replace('feedback = info', 'feedback = error'))
@@ -352,6 +352,37 @@ class ConfigReloadTests(unittest.IsolatedAsyncioTestCase):
 				await asyncio.gather(*runner._tasks)
 			self.assertEqual(config['feedback'], 'error')
 			osd.assert_not_awaited()
+
+	async def test_invalid_config_file_is_reported(self) -> None:
+		invalid = 'KeePassXC runner: invalid settings file, previous settings kept'
+		with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {'XDG_CONFIG_HOME': tmp}), \
+				contextlib.redirect_stdout(io.StringIO()):
+			module = importlib.reload(krunner_keepassxc.config)
+			config = module.read_config()
+			file = Path(tmp) / 'krunner-keepassxc' / 'config'
+
+			# broken while running: reported once, as an error (the edit to feedback doesn't apply, the file is invalid)
+			file.write_text(file.read_text().replace('feedback = info', 'feedback = error') + 'broken line without section\n[')
+			with mock.patch('krunner_keepassxc.runner.show_osd', new_callable=mock.AsyncMock) as osd:
+				runner = KeepassRunner(config, cast(MessageBus, object()))
+				runner.kp = cast(Any, FakeKeepass([entry('Git')]))
+				runner.cp = cast(Any, FakeClipboard())
+				await match(runner, 'git')
+				await match(runner, 'git')
+				await asyncio.gather(*runner._tasks)
+			osd.assert_awaited_once_with(runner.bus, invalid, 'dialog-warning')
+
+			# broken already when the service starts: reported on the first request
+			module = importlib.reload(krunner_keepassxc.config)
+			config = module.read_config()
+			with mock.patch('krunner_keepassxc.runner.show_osd', new_callable=mock.AsyncMock) as osd:
+				runner = KeepassRunner(config, cast(MessageBus, object()))
+				runner.kp = cast(Any, FakeKeepass([entry('Git')]))
+				runner.cp = cast(Any, FakeClipboard())
+				await match(runner, 'git')
+				await match(runner, 'git')
+				await asyncio.gather(*runner._tasks)
+			osd.assert_awaited_once_with(runner.bus, invalid, 'dialog-warning')
 
 
 if __name__ == '__main__':
